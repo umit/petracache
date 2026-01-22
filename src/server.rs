@@ -135,7 +135,7 @@ impl Server {
                                 match parse_result {
                                     ParseResult::Complete(cmd, consumed) => {
                                         pending_storage = None;
-                                        let start = Instant::now();
+                                        //let start = Instant::now();
 
                                         let should_quit = matches!(cmd, Command::Quit);
                                         let noreply = cmd.is_noreply();
@@ -144,7 +144,7 @@ impl Server {
                                         self.execute_command(cmd, &mut response);
 
                                         // Record latency
-                                        self.metrics.cmd_latency.observe(start.elapsed().as_secs_f64());
+                                        //self.metrics.cmd_latency.observe(start.elapsed().as_secs_f64());
 
                                         // Consume processed bytes
                                         let _ = read_buf.split_to(consumed);
@@ -237,25 +237,44 @@ impl Server {
         keys: Vec<std::borrow::Cow<'_, [u8]>>,
         response: &mut ResponseWriter,
     ) {
-        let keys_vec: Vec<Vec<u8>> = keys.iter().map(|k| k.to_vec()).collect();
-
-        match self.storage.get_multi(&keys_vec) {
-            Ok(results) => {
-                for (key, value_opt) in results {
-                    if let Some(value) = value_opt {
-                        self.metrics.get_hits.inc();
-                        response.value(&key, value.flags, &value.data);
-                    } else {
-                        self.metrics.get_misses.inc();
+        if keys.len() == 1 {
+            // Fast path - single key (most common case)
+            match self.storage.get(&keys[0]) {
+                Ok(Some(value)) => {
+                    self.metrics.get_hits.inc();
+                    response.value(&keys[0], value.flags, &value.data);
+                }
+                Ok(None) => {
+                    self.metrics.get_misses.inc();
+                }
+                Err(e) => {
+                    self.metrics.storage_errors.inc();
+                    response.server_error(&e.to_string());
+                    return;
+                }
+            }
+        } else {
+            // Multi-key path
+            let keys_vec: Vec<Vec<u8>> = keys.iter().map(|k| k.to_vec()).collect();
+            match self.storage.get_multi(&keys_vec) {
+                Ok(results) => {
+                    for (key, value_opt) in results {
+                        if let Some(value) = value_opt {
+                            self.metrics.get_hits.inc();
+                            response.value(&key, value.flags, &value.data);
+                        } else {
+                            self.metrics.get_misses.inc();
+                        }
                     }
                 }
-                response.end();
-            }
-            Err(e) => {
-                self.metrics.storage_errors.inc();
-                response.server_error(&e.to_string());
+                Err(e) => {
+                    self.metrics.storage_errors.inc();
+                    response.server_error(&e.to_string());
+                    return;
+                }
             }
         }
+        response.end();
     }
 
     /// Handle SET command
