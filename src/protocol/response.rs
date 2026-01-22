@@ -35,7 +35,7 @@ impl ResponseWriter {
         self.buf.is_empty()
     }
 
-    /// Write a VALUE line for get/gets response
+    /// Write a VALUE line for get response
     /// Format: VALUE <key> <flags> <bytes>\r\n<data>\r\n
     pub fn value(&mut self, key: &[u8], flags: u32, data: &[u8]) {
         self.buf.extend_from_slice(b"VALUE ");
@@ -50,24 +50,7 @@ impl ResponseWriter {
         self.buf.extend_from_slice(b"\r\n");
     }
 
-    /// Write a VALUE line with CAS for gets response (we use 0 as CAS since we don't support it)
-    /// Format: VALUE <key> <flags> <bytes> <cas unique>\r\n<data>\r\n
-    pub fn value_with_cas(&mut self, key: &[u8], flags: u32, data: &[u8], cas: u64) {
-        self.buf.extend_from_slice(b"VALUE ");
-        self.buf.extend_from_slice(key);
-        self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(flags.to_string().as_bytes());
-        self.buf.extend_from_slice(b" ");
-        self.buf
-            .extend_from_slice(data.len().to_string().as_bytes());
-        self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(cas.to_string().as_bytes());
-        self.buf.extend_from_slice(b"\r\n");
-        self.buf.extend_from_slice(data);
-        self.buf.extend_from_slice(b"\r\n");
-    }
-
-    /// Write END to terminate get/gets response
+    /// Write END to terminate get response
     pub fn end(&mut self) {
         self.buf.extend_from_slice(b"END\r\n");
     }
@@ -75,16 +58,6 @@ impl ResponseWriter {
     /// Write STORED response
     pub fn stored(&mut self) {
         self.buf.extend_from_slice(b"STORED\r\n");
-    }
-
-    /// Write NOT_STORED response
-    pub fn not_stored(&mut self) {
-        self.buf.extend_from_slice(b"NOT_STORED\r\n");
-    }
-
-    /// Write EXISTS response (CAS conflict)
-    pub fn exists(&mut self) {
-        self.buf.extend_from_slice(b"EXISTS\r\n");
     }
 
     /// Write NOT_FOUND response
@@ -95,43 +68,6 @@ impl ResponseWriter {
     /// Write DELETED response
     pub fn deleted(&mut self) {
         self.buf.extend_from_slice(b"DELETED\r\n");
-    }
-
-    /// Write TOUCHED response
-    pub fn touched(&mut self) {
-        self.buf.extend_from_slice(b"TOUCHED\r\n");
-    }
-
-    /// Write OK response (for flush_all)
-    pub fn ok(&mut self) {
-        self.buf.extend_from_slice(b"OK\r\n");
-    }
-
-    /// Write numeric response (for incr/decr)
-    pub fn numeric(&mut self, value: u64) {
-        self.buf.extend_from_slice(value.to_string().as_bytes());
-        self.buf.extend_from_slice(b"\r\n");
-    }
-
-    /// Write VERSION response
-    pub fn version(&mut self, version: &str) {
-        self.buf.extend_from_slice(b"VERSION ");
-        self.buf.extend_from_slice(version.as_bytes());
-        self.buf.extend_from_slice(b"\r\n");
-    }
-
-    /// Write a STAT line
-    pub fn stat(&mut self, name: &str, value: &str) {
-        self.buf.extend_from_slice(b"STAT ");
-        self.buf.extend_from_slice(name.as_bytes());
-        self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(value.as_bytes());
-        self.buf.extend_from_slice(b"\r\n");
-    }
-
-    /// Write ERROR response (unknown command)
-    pub fn error(&mut self) {
-        self.buf.extend_from_slice(b"ERROR\r\n");
     }
 
     /// Write CLIENT_ERROR response
@@ -167,13 +103,6 @@ mod tests {
     }
 
     #[test]
-    fn test_value_with_cas() {
-        let mut writer = ResponseWriter::new(256);
-        writer.value_with_cas(b"mykey", 0, b"data", 12345);
-        assert_eq!(writer.buffer(), b"VALUE mykey 0 4 12345\r\ndata\r\n");
-    }
-
-    #[test]
     fn test_get_response() {
         let mut writer = ResponseWriter::new(256);
         writer.value(b"key1", 0, b"value1");
@@ -191,49 +120,11 @@ mod tests {
         writer.stored();
         assert_eq!(writer.take().as_ref(), b"STORED\r\n");
 
-        writer.not_stored();
-        assert_eq!(writer.take().as_ref(), b"NOT_STORED\r\n");
-
         writer.deleted();
         assert_eq!(writer.take().as_ref(), b"DELETED\r\n");
 
         writer.not_found();
         assert_eq!(writer.take().as_ref(), b"NOT_FOUND\r\n");
-
-        writer.touched();
-        assert_eq!(writer.take().as_ref(), b"TOUCHED\r\n");
-
-        writer.ok();
-        assert_eq!(writer.take().as_ref(), b"OK\r\n");
-
-        writer.error();
-        assert_eq!(writer.take().as_ref(), b"ERROR\r\n");
-    }
-
-    #[test]
-    fn test_numeric() {
-        let mut writer = ResponseWriter::new(256);
-        writer.numeric(12345);
-        assert_eq!(writer.buffer(), b"12345\r\n");
-    }
-
-    #[test]
-    fn test_version() {
-        let mut writer = ResponseWriter::new(256);
-        writer.version("1.0.0");
-        assert_eq!(writer.buffer(), b"VERSION 1.0.0\r\n");
-    }
-
-    #[test]
-    fn test_stat() {
-        let mut writer = ResponseWriter::new(256);
-        writer.stat("pid", "12345");
-        writer.stat("uptime", "3600");
-        writer.end();
-        assert_eq!(
-            writer.buffer(),
-            b"STAT pid 12345\r\nSTAT uptime 3600\r\nEND\r\n"
-        );
     }
 
     #[test]

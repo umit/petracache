@@ -17,9 +17,6 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
-/// Version string for memcached VERSION command
-const VERSION: &str = "rocksproxy 0.1.0";
-
 /// Main server struct
 pub struct Server {
     config: ServerConfig,
@@ -212,11 +209,7 @@ impl Server {
         match cmd {
             Command::Get { keys } => {
                 self.metrics.cmd_get.inc();
-                self.handle_get(keys, response, false);
-            }
-            Command::Gets { keys } => {
-                self.metrics.cmd_get.inc();
-                self.handle_get(keys, response, true);
+                self.handle_get(keys, response);
             }
             Command::Set {
                 key,
@@ -232,33 +225,17 @@ impl Server {
                 self.metrics.cmd_delete.inc();
                 self.handle_delete(&key, response);
             }
-            Command::Version => {
-                response.version(VERSION);
-            }
-            Command::Stats { .. } => {
-                self.handle_stats(response);
-            }
             Command::Quit => {
                 // Handled in main loop
-            }
-            // Unsupported commands
-            Command::Add { .. }
-            | Command::Replace { .. }
-            | Command::Incr { .. }
-            | Command::Decr { .. }
-            | Command::Touch { .. }
-            | Command::FlushAll { .. } => {
-                response.server_error("Command not supported");
             }
         }
     }
 
-    /// Handle GET/GETS command
+    /// Handle GET command
     fn handle_get(
         &self,
         keys: Vec<std::borrow::Cow<'_, [u8]>>,
         response: &mut ResponseWriter,
-        with_cas: bool,
     ) {
         let keys_vec: Vec<Vec<u8>> = keys.iter().map(|k| k.to_vec()).collect();
 
@@ -267,11 +244,7 @@ impl Server {
                 for (key, value_opt) in results {
                     if let Some(value) = value_opt {
                         self.metrics.get_hits.inc();
-                        if with_cas {
-                            response.value_with_cas(&key, value.flags, &value.data, 0);
-                        } else {
-                            response.value(&key, value.flags, &value.data);
-                        }
+                        response.value(&key, value.flags, &value.data);
                     } else {
                         self.metrics.get_misses.inc();
                     }
@@ -314,29 +287,6 @@ impl Server {
                 response.server_error(&e.to_string());
             }
         }
-    }
-
-    /// Handle STATS command
-    fn handle_stats(&self, response: &mut ResponseWriter) {
-        response.stat("version", VERSION);
-        response.stat("cmd_get", &self.metrics.cmd_get.get().to_string());
-        response.stat("cmd_set", &self.metrics.cmd_set.get().to_string());
-        response.stat("get_hits", &self.metrics.get_hits.get().to_string());
-        response.stat("get_misses", &self.metrics.get_misses.get().to_string());
-        response.stat(
-            "curr_connections",
-            &self.metrics.active_connections.get().to_string(),
-        );
-        response.stat(
-            "total_connections",
-            &self.metrics.total_connections.get().to_string(),
-        );
-        response.stat("bytes_read", &self.metrics.bytes_read.get().to_string());
-        response.stat(
-            "bytes_written",
-            &self.metrics.bytes_written.get().to_string(),
-        );
-        response.end();
     }
 }
 

@@ -11,29 +11,8 @@ pub enum Command<'a> {
     /// get <key>*
     Get { keys: Vec<Cow<'a, [u8]>> },
 
-    /// gets <key>* (with CAS - we don't support CAS, but accept the command)
-    Gets { keys: Vec<Cow<'a, [u8]>> },
-
     /// set <key> <flags> <exptime> <bytes> [noreply]
     Set {
-        key: Cow<'a, [u8]>,
-        flags: u32,
-        exptime: u64,
-        data: Cow<'a, [u8]>,
-        noreply: bool,
-    },
-
-    /// add <key> <flags> <exptime> <bytes> [noreply]
-    Add {
-        key: Cow<'a, [u8]>,
-        flags: u32,
-        exptime: u64,
-        data: Cow<'a, [u8]>,
-        noreply: bool,
-    },
-
-    /// replace <key> <flags> <exptime> <bytes> [noreply]
-    Replace {
         key: Cow<'a, [u8]>,
         flags: u32,
         exptime: u64,
@@ -44,36 +23,6 @@ pub enum Command<'a> {
     /// delete <key> [noreply]
     Delete { key: Cow<'a, [u8]>, noreply: bool },
 
-    /// incr <key> <value> [noreply]
-    Incr {
-        key: Cow<'a, [u8]>,
-        value: u64,
-        noreply: bool,
-    },
-
-    /// decr <key> <value> [noreply]
-    Decr {
-        key: Cow<'a, [u8]>,
-        value: u64,
-        noreply: bool,
-    },
-
-    /// touch <key> <exptime> [noreply]
-    Touch {
-        key: Cow<'a, [u8]>,
-        exptime: u64,
-        noreply: bool,
-    },
-
-    /// flush_all [delay] [noreply]
-    FlushAll { delay: u64, noreply: bool },
-
-    /// version
-    Version,
-
-    /// stats [args]
-    Stats { args: Option<Cow<'a, [u8]>> },
-
     /// quit
     Quit,
 }
@@ -82,109 +31,8 @@ impl<'a> Command<'a> {
     /// Returns true if this command should not send a response
     pub fn is_noreply(&self) -> bool {
         match self {
-            Command::Set { noreply, .. }
-            | Command::Add { noreply, .. }
-            | Command::Replace { noreply, .. }
-            | Command::Delete { noreply, .. }
-            | Command::Incr { noreply, .. }
-            | Command::Decr { noreply, .. }
-            | Command::Touch { noreply, .. }
-            | Command::FlushAll { noreply, .. } => *noreply,
+            Command::Set { noreply, .. } | Command::Delete { noreply, .. } => *noreply,
             _ => false,
-        }
-    }
-
-    /// Convert to owned command (for async processing)
-    pub fn into_owned(self) -> Command<'static> {
-        match self {
-            Command::Get { keys } => Command::Get {
-                keys: keys
-                    .into_iter()
-                    .map(|k| Cow::Owned(k.into_owned()))
-                    .collect(),
-            },
-            Command::Gets { keys } => Command::Gets {
-                keys: keys
-                    .into_iter()
-                    .map(|k| Cow::Owned(k.into_owned()))
-                    .collect(),
-            },
-            Command::Set {
-                key,
-                flags,
-                exptime,
-                data,
-                noreply,
-            } => Command::Set {
-                key: Cow::Owned(key.into_owned()),
-                flags,
-                exptime,
-                data: Cow::Owned(data.into_owned()),
-                noreply,
-            },
-            Command::Add {
-                key,
-                flags,
-                exptime,
-                data,
-                noreply,
-            } => Command::Add {
-                key: Cow::Owned(key.into_owned()),
-                flags,
-                exptime,
-                data: Cow::Owned(data.into_owned()),
-                noreply,
-            },
-            Command::Replace {
-                key,
-                flags,
-                exptime,
-                data,
-                noreply,
-            } => Command::Replace {
-                key: Cow::Owned(key.into_owned()),
-                flags,
-                exptime,
-                data: Cow::Owned(data.into_owned()),
-                noreply,
-            },
-            Command::Delete { key, noreply } => Command::Delete {
-                key: Cow::Owned(key.into_owned()),
-                noreply,
-            },
-            Command::Incr {
-                key,
-                value,
-                noreply,
-            } => Command::Incr {
-                key: Cow::Owned(key.into_owned()),
-                value,
-                noreply,
-            },
-            Command::Decr {
-                key,
-                value,
-                noreply,
-            } => Command::Decr {
-                key: Cow::Owned(key.into_owned()),
-                value,
-                noreply,
-            },
-            Command::Touch {
-                key,
-                exptime,
-                noreply,
-            } => Command::Touch {
-                key: Cow::Owned(key.into_owned()),
-                exptime,
-                noreply,
-            },
-            Command::FlushAll { delay, noreply } => Command::FlushAll { delay, noreply },
-            Command::Version => Command::Version,
-            Command::Stats { args } => Command::Stats {
-                args: args.map(|a| Cow::Owned(a.into_owned())),
-            },
-            Command::Quit => Command::Quit,
         }
     }
 }

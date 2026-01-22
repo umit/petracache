@@ -22,20 +22,12 @@ pub enum ParseResult<'a> {
 /// Parser state for handling storage commands that need data
 #[derive(Debug, Clone)]
 pub struct PendingStorageCommand {
-    pub command_type: StorageCommandType,
     pub key: Vec<u8>,
     pub flags: u32,
     pub exptime: u64,
     pub bytes: usize,
     pub noreply: bool,
     pub command_line_end: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StorageCommandType {
-    Set,
-    Add,
-    Replace,
 }
 
 /// Parse a memcached command from a buffer
@@ -57,18 +49,9 @@ pub fn parse(buf: &[u8]) -> ParseResult<'_> {
 
     // Match command (case-insensitive)
     match cmd_name.to_ascii_lowercase().as_slice() {
-        b"get" => parse_get(parts, line_end + 2, false),
-        b"gets" => parse_get(parts, line_end + 2, true),
-        b"set" => parse_storage(parts, buf, line_end, StorageCommandType::Set),
-        b"add" => parse_storage(parts, buf, line_end, StorageCommandType::Add),
-        b"replace" => parse_storage(parts, buf, line_end, StorageCommandType::Replace),
+        b"get" => parse_get(parts, line_end + 2),
+        b"set" => parse_set(parts, buf, line_end),
         b"delete" => parse_delete(parts, line_end + 2),
-        b"incr" => parse_incr_decr(parts, line_end + 2, true),
-        b"decr" => parse_incr_decr(parts, line_end + 2, false),
-        b"touch" => parse_touch(parts, line_end + 2),
-        b"flush_all" => parse_flush_all(parts, line_end + 2),
-        b"version" => ParseResult::Complete(Command::Version, line_end + 2),
-        b"stats" => parse_stats(parts, line_end + 2),
         b"quit" => ParseResult::Complete(Command::Quit, line_end + 2),
         _ => ParseResult::Error(ProtocolError::InvalidCommand(
             String::from_utf8_lossy(cmd_name).to_string(),
@@ -95,28 +78,12 @@ pub fn parse_storage_data<'a>(buf: &'a [u8], pending: &PendingStorageCommand) ->
     let data = Cow::Borrowed(&buf[data_start..data_end]);
     let key = Cow::Owned(pending.key.clone());
 
-    let cmd = match pending.command_type {
-        StorageCommandType::Set => Command::Set {
-            key,
-            flags: pending.flags,
-            exptime: pending.exptime,
-            data,
-            noreply: pending.noreply,
-        },
-        StorageCommandType::Add => Command::Add {
-            key,
-            flags: pending.flags,
-            exptime: pending.exptime,
-            data,
-            noreply: pending.noreply,
-        },
-        StorageCommandType::Replace => Command::Replace {
-            key,
-            flags: pending.flags,
-            exptime: pending.exptime,
-            data,
-            noreply: pending.noreply,
-        },
+    let cmd = Command::Set {
+        key,
+        flags: pending.flags,
+        exptime: pending.exptime,
+        data,
+        noreply: pending.noreply,
     };
 
     ParseResult::Complete(cmd, total_needed)
@@ -127,11 +94,10 @@ fn find_crlf(buf: &[u8]) -> Option<usize> {
     (0..buf.len().saturating_sub(1)).find(|&i| buf[i] == b'\r' && buf[i + 1] == b'\n')
 }
 
-/// Parse get/gets command
+/// Parse get command
 fn parse_get<'a>(
     mut parts: impl Iterator<Item = &'a [u8]>,
     consumed: usize,
-    is_gets: bool,
 ) -> ParseResult<'a> {
     let mut keys = Vec::new();
 
@@ -156,21 +122,14 @@ fn parse_get<'a>(
         ));
     }
 
-    let cmd = if is_gets {
-        Command::Gets { keys }
-    } else {
-        Command::Get { keys }
-    };
-
-    ParseResult::Complete(cmd, consumed)
+    ParseResult::Complete(Command::Get { keys }, consumed)
 }
 
-/// Parse storage commands (set, add, replace)
-fn parse_storage<'a>(
+/// Parse set command
+fn parse_set<'a>(
     mut parts: impl Iterator<Item = &'a [u8]>,
     buf: &'a [u8],
     line_end: usize,
-    cmd_type: StorageCommandType,
 ) -> ParseResult<'a> {
     // <key> <flags> <exptime> <bytes> [noreply]
     let key = match parts.next() {
@@ -210,8 +169,6 @@ fn parse_storage<'a>(
     let total_needed = data_end + 2;
 
     if buf.len() < total_needed {
-        // Return a pending command indicator - we need to wait for more data
-        // The caller should handle this by storing the pending state
         return ParseResult::NeedMoreData;
     }
 
@@ -223,28 +180,12 @@ fn parse_storage<'a>(
     let data = Cow::Borrowed(&buf[data_start..data_end]);
     let key = Cow::Borrowed(key);
 
-    let cmd = match cmd_type {
-        StorageCommandType::Set => Command::Set {
-            key,
-            flags,
-            exptime,
-            data,
-            noreply,
-        },
-        StorageCommandType::Add => Command::Add {
-            key,
-            flags,
-            exptime,
-            data,
-            noreply,
-        },
-        StorageCommandType::Replace => Command::Replace {
-            key,
-            flags,
-            exptime,
-            data,
-            noreply,
-        },
+    let cmd = Command::Set {
+        key,
+        flags,
+        exptime,
+        data,
+        noreply,
     };
 
     ParseResult::Complete(cmd, total_needed)
@@ -267,12 +208,10 @@ pub fn parse_storage_command_line(
         _ => return Err(ProtocolError::InvalidCommand("empty command".to_string())),
     };
 
-    let cmd_type = match cmd_name.to_ascii_lowercase().as_slice() {
-        b"set" => StorageCommandType::Set,
-        b"add" => StorageCommandType::Add,
-        b"replace" => StorageCommandType::Replace,
-        _ => return Ok(None), // Not a storage command
-    };
+    // Only handle set command
+    if cmd_name.to_ascii_lowercase().as_slice() != b"set" {
+        return Ok(None);
+    }
 
     let key = match parts.next() {
         Some(k) if !k.is_empty() => k,
@@ -306,7 +245,6 @@ pub fn parse_storage_command_line(
     let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
 
     Ok(Some(PendingStorageCommand {
-        command_type: cmd_type,
         key: key.to_vec(),
         flags,
         exptime,
@@ -347,128 +285,6 @@ fn parse_delete<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) 
     )
 }
 
-/// Parse incr/decr commands
-fn parse_incr_decr<'a>(
-    mut parts: impl Iterator<Item = &'a [u8]>,
-    consumed: usize,
-    is_incr: bool,
-) -> ParseResult<'a> {
-    let key = match parts.next() {
-        Some(k) if !k.is_empty() => k,
-        _ => {
-            return ParseResult::Error(ProtocolError::InvalidCommand(
-                "incr/decr requires a key".to_string(),
-            ));
-        }
-    };
-
-    if !is_valid_key(key) {
-        if key.len() > MAX_KEY_LENGTH {
-            return ParseResult::Error(ProtocolError::KeyTooLong);
-        }
-        return ParseResult::Error(ProtocolError::InvalidKey(
-            String::from_utf8_lossy(key).to_string(),
-        ));
-    }
-
-    let value = match parts.next().and_then(parse_u64) {
-        Some(v) => v,
-        None => return ParseResult::Error(ProtocolError::InvalidNumericValue),
-    };
-
-    let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
-
-    let cmd = if is_incr {
-        Command::Incr {
-            key: Cow::Borrowed(key),
-            value,
-            noreply,
-        }
-    } else {
-        Command::Decr {
-            key: Cow::Borrowed(key),
-            value,
-            noreply,
-        }
-    };
-
-    ParseResult::Complete(cmd, consumed)
-}
-
-/// Parse touch command
-fn parse_touch<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) -> ParseResult<'a> {
-    let key = match parts.next() {
-        Some(k) if !k.is_empty() => k,
-        _ => {
-            return ParseResult::Error(ProtocolError::InvalidCommand(
-                "touch requires a key".to_string(),
-            ));
-        }
-    };
-
-    if !is_valid_key(key) {
-        if key.len() > MAX_KEY_LENGTH {
-            return ParseResult::Error(ProtocolError::KeyTooLong);
-        }
-        return ParseResult::Error(ProtocolError::InvalidKey(
-            String::from_utf8_lossy(key).to_string(),
-        ));
-    }
-
-    let exptime = match parts.next().and_then(parse_u64) {
-        Some(e) => e,
-        None => return ParseResult::Error(ProtocolError::InvalidExptime),
-    };
-
-    let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
-
-    ParseResult::Complete(
-        Command::Touch {
-            key: Cow::Borrowed(key),
-            exptime,
-            noreply,
-        },
-        consumed,
-    )
-}
-
-/// Parse flush_all command
-fn parse_flush_all<'a>(
-    mut parts: impl Iterator<Item = &'a [u8]>,
-    consumed: usize,
-) -> ParseResult<'a> {
-    let mut delay = 0u64;
-    let mut noreply = false;
-
-    if let Some(arg) = parts.next() {
-        if arg == b"noreply" {
-            noreply = true;
-        } else if let Some(d) = parse_u64(arg) {
-            delay = d;
-            if let Some(arg2) = parts.next()
-                && arg2 == b"noreply"
-            {
-                noreply = true;
-            }
-        }
-    }
-
-    ParseResult::Complete(Command::FlushAll { delay, noreply }, consumed)
-}
-
-/// Parse stats command
-fn parse_stats<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) -> ParseResult<'a> {
-    let args = parts.next().and_then(|s| {
-        if s.is_empty() {
-            None
-        } else {
-            Some(Cow::Borrowed(s))
-        }
-    });
-
-    ParseResult::Complete(Command::Stats { args }, consumed)
-}
-
 /// Parse bytes as u32
 fn parse_u32(bytes: &[u8]) -> Option<u32> {
     std::str::from_utf8(bytes).ok()?.parse().ok()
@@ -498,18 +314,6 @@ mod tests {
                 assert_eq!(keys[1].as_ref(), b"bar");
                 assert_eq!(keys[2].as_ref(), b"baz");
                 assert_eq!(consumed, buf.len());
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_gets() {
-        let buf = b"gets mykey\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::Gets { keys }, _) => {
-                assert_eq!(keys.len(), 1);
-                assert_eq!(keys[0].as_ref(), b"mykey");
             }
             other => panic!("unexpected: {:?}", other),
         }
@@ -552,41 +356,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_add() {
-        let buf = b"add newkey 0 0 4\r\ntest\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::Add { key, data, .. }, _) => {
-                assert_eq!(key.as_ref(), b"newkey");
-                assert_eq!(data.as_ref(), b"test");
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_replace() {
-        let buf = b"replace existingkey 1 60 6\r\nupdate\r\n";
-        match parse(buf) {
-            ParseResult::Complete(
-                Command::Replace {
-                    key,
-                    flags,
-                    exptime,
-                    data,
-                    ..
-                },
-                _,
-            ) => {
-                assert_eq!(key.as_ref(), b"existingkey");
-                assert_eq!(flags, 1);
-                assert_eq!(exptime, 60);
-                assert_eq!(data.as_ref(), b"update");
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
     fn test_parse_delete() {
         let buf = b"delete mykey\r\n";
         match parse(buf) {
@@ -604,109 +373,6 @@ mod tests {
         match parse(buf) {
             ParseResult::Complete(Command::Delete { noreply, .. }, _) => {
                 assert!(noreply);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_incr() {
-        let buf = b"incr counter 5\r\n";
-        match parse(buf) {
-            ParseResult::Complete(
-                Command::Incr {
-                    key,
-                    value,
-                    noreply,
-                },
-                _,
-            ) => {
-                assert_eq!(key.as_ref(), b"counter");
-                assert_eq!(value, 5);
-                assert!(!noreply);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_decr() {
-        let buf = b"decr counter 10 noreply\r\n";
-        match parse(buf) {
-            ParseResult::Complete(
-                Command::Decr {
-                    key,
-                    value,
-                    noreply,
-                },
-                _,
-            ) => {
-                assert_eq!(key.as_ref(), b"counter");
-                assert_eq!(value, 10);
-                assert!(noreply);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_touch() {
-        let buf = b"touch mykey 3600\r\n";
-        match parse(buf) {
-            ParseResult::Complete(
-                Command::Touch {
-                    key,
-                    exptime,
-                    noreply,
-                },
-                _,
-            ) => {
-                assert_eq!(key.as_ref(), b"mykey");
-                assert_eq!(exptime, 3600);
-                assert!(!noreply);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_flush_all() {
-        let buf = b"flush_all\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::FlushAll { delay, noreply }, _) => {
-                assert_eq!(delay, 0);
-                assert!(!noreply);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_flush_all_delay() {
-        let buf = b"flush_all 60\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::FlushAll { delay, .. }, _) => {
-                assert_eq!(delay, 60);
-            }
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_version() {
-        let buf = b"version\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::Version, _) => {}
-            other => panic!("unexpected: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_parse_stats() {
-        let buf = b"stats\r\n";
-        match parse(buf) {
-            ParseResult::Complete(Command::Stats { args }, _) => {
-                assert!(args.is_none());
             }
             other => panic!("unexpected: {:?}", other),
         }
