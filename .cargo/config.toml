@@ -1,0 +1,5 @@
+# Fix for RocksDB C++ compilation on macOS with newer clang
+# See: https://github.com/rust-rocksdb/rust-rocksdb/issues/995
+[env]
+MACOSX_DEPLOYMENT_TARGET = "14.0"
+CXXFLAGS = "-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
