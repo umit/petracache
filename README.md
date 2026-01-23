@@ -1,29 +1,45 @@
 # PetraCache
 
-High-performance memcached-compatible cache server backed by RocksDB, written in Rust.
+High-performance in-memory cache with persistent storage, designed to run behind mcrouter.
 
 > *Petra* (πέτρα) means "rock" in Greek - a nod to the RocksDB storage engine.
 
-PetraCache speaks the memcached ASCII protocol and uses RocksDB as its storage backend, making it ideal for use behind mcrouter for routing and failover.
+## Why PetraCache?
+
+**The Problem:** Standard memcached is fast but volatile - data is lost on restart. Redis offers persistence but with different protocol and complexity.
+
+**The Solution:** PetraCache combines the best of both worlds:
+- **In-Memory Performance**: RocksDB's block cache keeps hot data in memory
+- **Persistent Storage**: Data survives restarts, no cold cache problem
+- **Memcached Protocol**: Drop-in replacement, works with existing clients
+- **mcrouter Ready**: Built for distributed caching with routing and failover
 
 ```
 ┌──────────────┐     ┌───────────┐     ┌─────────────────────────┐
 │ app/service  │────▶│ mcrouter  │────▶│ PetraCache              │
-│ (memcache    │     │ (routing, │     │  ├─ ASCII protocol      │
-│  client)     │     │  failover)│     │  ├─ TTL support         │
-└──────────────┘     └───────────┘     │  └─ RocksDB backend     │
+│ (memcache    │     │ (routing, │     │  ├─ In-memory (fast)    │
+│  client)     │     │  failover)│     │  ├─ Persistent (safe)   │
+└──────────────┘     └───────────┘     │  └─ TTL support         │
                                        └─────────────────────────┘
 ```
 
+## Use Cases
+
+- **Session Storage**: Persistent sessions that survive restarts
+- **API Response Caching**: Fast reads with durability guarantee
+- **Rate Limiting**: Counters that don't reset on deploy
+- **Feature Flags**: Configuration cache with persistence
+- **High-Traffic Caching**: When you need both speed and reliability
+
 ## Features
 
-- **Memcached ASCII Protocol**: Compatible with standard memcached clients
-- **RocksDB Backend**: Persistent, high-performance key-value storage
-- **TTL Support**: Automatic expiration with lazy deletion and compaction filter
-- **mcrouter Compatible**: Works with mcrouter for routing and failover
-- **Prometheus Metrics**: Built-in metrics endpoint
-- **Health Checks**: HTTP endpoints for liveness and readiness probes
-- **Zero-Copy Parsing**: Efficient protocol parsing with minimal allocations
+- **In-Memory + Persistent**: Hot data in memory via RocksDB block cache, all data persisted to disk
+- **Memcached Protocol**: Drop-in replacement for memcached, works with any memcached client
+- **mcrouter Integration**: Designed for distributed caching with Facebook's mcrouter
+- **TTL Support**: Memcached-compatible expiration (lazy deletion + compaction filter)
+- **High Performance**: Zero-copy parsing, efficient buffer management, async I/O
+- **Production Ready**: Prometheus metrics, health checks, graceful shutdown
+- **Configurable Memory**: Tune block cache size based on your memory budget
 
 ## Requirements
 
