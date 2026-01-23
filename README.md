@@ -25,11 +25,12 @@ High-performance in-memory cache with persistent storage, designed to run behind
 
 ## Use Cases
 
-- **Session Storage**: Persistent sessions that survive restarts
-- **API Response Caching**: Fast reads with durability guarantee
-- **Rate Limiting**: Counters that don't reset on deploy
-- **Feature Flags**: Configuration cache with persistence
-- **High-Traffic Caching**: When you need both speed and reliability
+- **High-Traffic Web Applications**: Handle millions of requests with sub-millisecond latency
+- **Real-Time Data Pipelines**: Fast key-value lookups for streaming data processing
+- **Microservices Architecture**: Shared state and caching layer across services
+- **Gaming & Ad Tech**: Low-latency data access for real-time bidding and game state
+- **Financial Systems**: High-throughput transaction caching with durability
+- **IoT Data Ingestion**: Buffer and store high-volume sensor data
 
 ## Features
 
