@@ -7,7 +7,14 @@ use crate::config::StorageConfig;
 use crate::storage::value::{StoredValue, current_timestamp};
 use rust_rocksdb::{BlockBasedOptions, CompactionDecision, DB, DBCompactionStyle, Options};
 use std::sync::Arc;
-use tracing::{debug, info};
+use std::sync::atomic::{AtomicU64, Ordering};
+use tracing::{info, trace};
+
+/// Global counter for TTL compaction removals (accessible from compaction filter)
+pub static TTL_COMPACTION_REMOVED: AtomicU64 = AtomicU64::new(0);
+
+/// Global counter for lazy expiration removals
+pub static LAZY_EXPIRATION_REMOVED: AtomicU64 = AtomicU64::new(0);
 
 /// Memory usage statistics
 #[derive(Debug, Clone, Default)]
@@ -76,7 +83,12 @@ impl RocksStorage {
             Some(bytes) => {
                 let value = StoredValue::decode(&bytes)?;
                 if value.is_expired() {
-                    debug!("Lazy delete expired key");
+                    LAZY_EXPIRATION_REMOVED.fetch_add(1, Ordering::Relaxed);
+                    info!(
+                        key = %String::from_utf8_lossy(key),
+                        expire_at = value.expire_at,
+                        "Lazy expiration: removed expired key"
+                    );
                     let _ = self.db.delete(key);
                     Ok(None)
                 } else {
@@ -112,8 +124,13 @@ impl RocksStorage {
             }
         }
 
-        for key in expired_keys {
-            let _ = self.db.delete(&key);
+        for key in &expired_keys {
+            LAZY_EXPIRATION_REMOVED.fetch_add(1, Ordering::Relaxed);
+            info!(
+                key = %String::from_utf8_lossy(key),
+                "Lazy expiration: removed expired key"
+            );
+            let _ = self.db.delete(key);
         }
 
         Ok(results)
@@ -157,14 +174,47 @@ impl RocksStorage {
             total: block_cache_usage,
         }
     }
+
+    /// Get TTL expiration statistics
+    pub fn ttl_stats() -> TtlStats {
+        TtlStats {
+            lazy_expiration_removed: LAZY_EXPIRATION_REMOVED.load(Ordering::Relaxed),
+            compaction_removed: TTL_COMPACTION_REMOVED.load(Ordering::Relaxed),
+        }
+    }
+
+    /// Manually trigger compaction (useful for testing TTL compaction)
+    pub fn compact(&self) {
+        info!("Starting manual compaction");
+        self.db.compact_range::<&[u8], &[u8]>(None, None);
+        info!(
+            compaction_removed = TTL_COMPACTION_REMOVED.load(Ordering::Relaxed),
+            "Manual compaction completed"
+        );
+    }
+}
+
+/// TTL expiration statistics
+#[derive(Debug, Clone, Default)]
+pub struct TtlStats {
+    /// Keys removed by lazy expiration (on GET)
+    pub lazy_expiration_removed: u64,
+    /// Keys removed by compaction filter
+    pub compaction_removed: u64,
 }
 
 /// TTL compaction filter - removes expired entries during compaction
-fn ttl_compaction_filter(_level: u32, _key: &[u8], value: &[u8]) -> CompactionDecision {
+fn ttl_compaction_filter(_level: u32, key: &[u8], value: &[u8]) -> CompactionDecision {
     if value.len() >= 8 {
         let expire_at = u64::from_le_bytes(value[0..8].try_into().unwrap_or([0; 8]));
 
         if expire_at != 0 && current_timestamp() >= expire_at {
+            TTL_COMPACTION_REMOVED.fetch_add(1, Ordering::Relaxed);
+            trace!(
+                key = %String::from_utf8_lossy(key),
+                expire_at = expire_at,
+                "TTL compaction: removing expired key"
+            );
             return CompactionDecision::Remove;
         }
     }

@@ -1,0 +1,21 @@
+# RocksProxy Configuration
+
+[server]
+listen_addr = "127.0.0.1:11211"
+max_connections = 10000
+read_buffer_size = 8192
+write_buffer_size = 8192
+
+[storage]
+db_path = "./data/rocksdb"
+block_cache_size = 1073741824  # 1GB
+write_buffer_size = 67108864   # 64MB
+max_write_buffer_number = 3
+target_file_size_base = 67108864  # 64MB
+max_background_jobs = 4
+enable_compression = false
+enable_ttl_compaction = true  # Enable TTL cleanup during compaction
+
+[metrics]
+enabled = true
+listen_addr = "127.0.0.1:9090"

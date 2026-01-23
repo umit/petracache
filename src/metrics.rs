@@ -1,5 +1,6 @@
 //! Prometheus metrics for RocksProxy
 
+use crate::storage::{LAZY_EXPIRATION_REMOVED, TTL_COMPACTION_REMOVED};
 use prometheus::{Histogram, HistogramOpts, IntCounter, IntGauge, Registry};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -156,7 +157,27 @@ impl Metrics {
         let metric_families = self.registry.gather();
         let mut buffer = Vec::new();
         encoder.encode(&metric_families, &mut buffer).unwrap();
-        String::from_utf8(buffer).unwrap()
+        let mut output = String::from_utf8(buffer).unwrap();
+
+        // Add TTL expiration stats (from static counters)
+        let lazy_removed = LAZY_EXPIRATION_REMOVED.load(Ordering::Relaxed);
+        let compaction_removed = TTL_COMPACTION_REMOVED.load(Ordering::Relaxed);
+
+        output.push_str(&format!(
+            "\n# HELP rocksproxy_ttl_lazy_expired_total Keys removed by lazy expiration on GET\n\
+             # TYPE rocksproxy_ttl_lazy_expired_total counter\n\
+             rocksproxy_ttl_lazy_expired_total {}\n",
+            lazy_removed
+        ));
+
+        output.push_str(&format!(
+            "\n# HELP rocksproxy_ttl_compaction_removed_total Keys removed by TTL compaction filter\n\
+             # TYPE rocksproxy_ttl_compaction_removed_total counter\n\
+             rocksproxy_ttl_compaction_removed_total {}\n",
+            compaction_removed
+        ));
+
+        output
     }
 }
 
