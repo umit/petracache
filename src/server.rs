@@ -224,10 +224,18 @@ impl Server {
                 self.metrics.cmd_delete.inc();
                 self.handle_delete(&key, response);
             }
+            Command::Version => {
+                self.handle_version(response);
+            }
             Command::Quit => {
                 // Handled in main loop
             }
         }
+    }
+
+    /// Handle VERSION command (used by mcrouter for health checks)
+    fn handle_version(&self, response: &mut ResponseWriter) {
+        response.version(concat!("rocksproxy ", env!("CARGO_PKG_VERSION")));
     }
 
     /// Handle GET command

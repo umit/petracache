@@ -64,6 +64,8 @@ pub fn parse(buf: &[u8]) -> ParseResult<'_> {
         parse_set(parts, buf, line_end)
     } else if cmd_eq(cmd_name, b"delete") {
         parse_delete(parts, line_end + 2)
+    } else if cmd_eq(cmd_name, b"version") {
+        ParseResult::Complete(Command::Version, line_end + 2)
     } else if cmd_eq(cmd_name, b"quit") {
         ParseResult::Complete(Command::Quit, line_end + 2)
     } else {
@@ -397,6 +399,24 @@ mod tests {
         let buf = b"quit\r\n";
         match parse(buf) {
             ParseResult::Complete(Command::Quit, _) => {}
+            other => panic!("unexpected: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_version() {
+        let buf = b"version\r\n";
+        match parse(buf) {
+            ParseResult::Complete(Command::Version, consumed) => {
+                assert_eq!(consumed, buf.len());
+            }
+            other => panic!("unexpected: {:?}", other),
+        }
+
+        // Case insensitive
+        let buf = b"VERSION\r\n";
+        match parse(buf) {
+            ParseResult::Complete(Command::Version, _) => {}
             other => panic!("unexpected: {:?}", other),
         }
     }

@@ -71,6 +71,15 @@ impl ResponseWriter {
         self.buf.extend_from_slice(b"DELETED\r\n");
     }
 
+    /// Write VERSION response
+    /// Format: VERSION <version_string>\r\n
+    /// Used by mcrouter for health checks (TKO recovery probes)
+    pub fn version(&mut self, version: &str) {
+        self.buf.extend_from_slice(b"VERSION ");
+        self.buf.extend_from_slice(version.as_bytes());
+        self.buf.extend_from_slice(b"\r\n");
+    }
+
     /// Write CLIENT_ERROR response
     pub fn client_error(&mut self, message: &str) {
         self.buf.extend_from_slice(b"CLIENT_ERROR ");
@@ -140,5 +149,12 @@ mod tests {
 
         writer.server_error("out of memory");
         assert_eq!(writer.take().as_ref(), b"SERVER_ERROR out of memory\r\n");
+    }
+
+    #[test]
+    fn test_version() {
+        let mut writer = ResponseWriter::new(256);
+        writer.version("rocksproxy 0.1.0");
+        assert_eq!(writer.buffer(), b"VERSION rocksproxy 0.1.0\r\n");
     }
 }

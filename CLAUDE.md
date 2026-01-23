@@ -38,13 +38,33 @@ cargo bench                    # Run benchmarks
 
 ## Supported Memcached Commands
 
-- `get <key>*` / `gets <key>*` - Multi-key support
-- `set`, `add`, `replace` - `<key> <flags> <exptime> <bytes> [noreply]`
-- `delete <key> [noreply]`
-- `incr` / `decr` - `<key> <value> [noreply]`
-- `touch <key> <exptime> [noreply]`
-- `flush_all [delay] [noreply]`
-- `version`, `stats`, `quit`
+- `get <key>*` - Retrieve values (multi-key support)
+- `set <key> <flags> <exptime> <bytes> [noreply]\r\n<data>\r\n` - Store value
+- `delete <key> [noreply]` - Delete key
+- `version` - Returns server version (used by mcrouter for health checks)
+- `quit` - Close connection
+
+## mcrouter Integration
+
+RocksProxy is designed to work behind [mcrouter](https://github.com/facebook/mcrouter), Facebook's memcached protocol router.
+
+**Health Check Behavior:**
+- mcrouter uses `version` command to probe server health
+- When a server times out consecutively, mcrouter marks it "TKO" (technical knockout)
+- mcrouter sends periodic `version` probes to detect recovery
+- Once `version` responds, mcrouter restores the server to active pool
+
+**Example mcrouter config:**
+```json
+{
+  "pools": {
+    "A": {
+      "servers": ["127.0.0.1:11211"]
+    }
+  },
+  "route": "PoolRoute|A"
+}
+```
 
 ## Storage Format
 

@@ -23,6 +23,9 @@ pub enum Command<'a> {
     /// delete <key> [noreply]
     Delete { key: Cow<'a, [u8]>, noreply: bool },
 
+    /// version - returns server version (used by mcrouter for health checks)
+    Version,
+
     /// quit
     Quit,
 }
