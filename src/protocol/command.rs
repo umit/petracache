@@ -20,7 +20,8 @@ pub enum Command<'a> {
         noreply: bool,
     },
 
-    /// delete <key> [noreply]
+    /// delete <key> [exptime] [noreply]
+    /// exptime is ignored but parsed for mcrouter compatibility
     Delete { key: Cow<'a, [u8]>, noreply: bool },
 
     /// version - returns server version (used by mcrouter for health checks)

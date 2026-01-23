@@ -271,6 +271,8 @@ pub fn parse_storage_command_line(
 }
 
 /// Parse delete command
+/// Format: delete <key> [exptime] [noreply]\r\n
+/// exptime is parsed but ignored (for mcrouter compatibility)
 fn parse_delete<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) -> ParseResult<'a> {
     let key = match parts.next() {
         Some(k) if !k.is_empty() => k,
@@ -290,7 +292,19 @@ fn parse_delete<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) 
         ));
     }
 
-    let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
+    // Parse optional exptime and noreply
+    // Format: [exptime] [noreply] where exptime is a number
+    let mut noreply = false;
+    for part in parts {
+        if part.is_empty() {
+            continue;
+        }
+        if part == b"noreply" {
+            noreply = true;
+        }
+        // If it's a number, it's exptime - we parse but ignore it
+        // (memcached delete exptime is deprecated anyway)
+    }
 
     ParseResult::Complete(
         Command::Delete {
@@ -388,6 +402,29 @@ mod tests {
         let buf = b"delete mykey noreply\r\n";
         match parse(buf) {
             ParseResult::Complete(Command::Delete { noreply, .. }, _) => {
+                assert!(noreply);
+            }
+            other => panic!("unexpected: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_delete_with_exptime() {
+        // mcrouter format: delete <key> <exptime>\r\n
+        let buf = b"delete mykey 0\r\n";
+        match parse(buf) {
+            ParseResult::Complete(Command::Delete { key, noreply }, _) => {
+                assert_eq!(key.as_ref(), b"mykey");
+                assert!(!noreply);
+            }
+            other => panic!("unexpected: {:?}", other),
+        }
+
+        // delete <key> <exptime> noreply\r\n
+        let buf = b"delete mykey 300 noreply\r\n";
+        match parse(buf) {
+            ParseResult::Complete(Command::Delete { key, noreply }, _) => {
+                assert_eq!(key.as_ref(), b"mykey");
                 assert!(noreply);
             }
             other => panic!("unexpected: {:?}", other),
