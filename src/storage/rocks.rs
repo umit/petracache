@@ -144,17 +144,10 @@ impl RocksStorage {
     }
 
     /// Delete a key
+    ///
+    /// Returns `true` if the key existed, `false` otherwise.
     pub fn delete(&self, key: &[u8]) -> Result<bool, StorageError> {
-        let exists = if let Some(bytes) = self.db.get(key)? {
-            if let Ok(existing) = StoredValue::decode(&bytes) {
-                !existing.is_expired()
-            } else {
-                true
-            }
-        } else {
-            false
-        };
-
+        let exists = self.db.get(key)?.is_some();
         if exists {
             self.db.delete(key)?;
         }
