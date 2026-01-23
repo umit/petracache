@@ -73,8 +73,15 @@ pub struct StorageConfig {
     /// Enable compression
     pub enable_compression: bool,
 
-    /// Enable TTL compaction filter
+    /// Enable TTL compaction filter (runs during RocksDB compaction)
     pub enable_ttl_compaction: bool,
+
+    /// TTL scan interval in seconds (0 = disabled)
+    /// Background scan that removes expired keys without waiting for compaction
+    pub ttl_scan_interval_secs: u64,
+
+    /// Max keys to scan per TTL scan cycle (for rate limiting)
+    pub ttl_scan_batch_size: usize,
 }
 
 impl Default for StorageConfig {
@@ -88,6 +95,8 @@ impl Default for StorageConfig {
             max_background_jobs: 4,
             enable_compression: false,
             enable_ttl_compaction: false,
+            ttl_scan_interval_secs: 0,     // Disabled by default
+            ttl_scan_batch_size: 10000,    // 10K keys per scan
         }
     }
 }

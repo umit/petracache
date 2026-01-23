@@ -14,7 +14,9 @@ max_write_buffer_number = 3
 target_file_size_base = 67108864  # 64MB
 max_background_jobs = 4
 enable_compression = false
-enable_ttl_compaction = true  # Enable TTL cleanup during compaction
+enable_ttl_compaction = false      # TTL cleanup during RocksDB compaction (high overhead)
+ttl_scan_interval_secs = 60        # Background scan every 60 seconds (0 = disabled)
+ttl_scan_batch_size = 10000        # Max keys to scan per cycle
 
 [metrics]
 enabled = true
