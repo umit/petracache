@@ -8,6 +8,16 @@ use crate::ProtocolError;
 use crate::protocol::command::{Command, MAX_KEY_LENGTH, is_valid_key};
 use std::borrow::Cow;
 
+/// Case-insensitive command comparison (avoids allocation from to_ascii_lowercase)
+#[inline]
+fn cmd_eq(cmd: &[u8], expected: &[u8]) -> bool {
+    cmd.len() == expected.len()
+        && cmd
+            .iter()
+            .zip(expected.iter())
+            .all(|(a, b)| a.to_ascii_lowercase() == *b)
+}
+
 /// Result of parsing
 #[derive(Debug)]
 pub enum ParseResult<'a> {
@@ -47,15 +57,19 @@ pub fn parse(buf: &[u8]) -> ParseResult<'_> {
         _ => return ParseResult::Error(ProtocolError::InvalidCommand("empty command".to_string())),
     };
 
-    // Match command (case-insensitive)
-    match cmd_name.to_ascii_lowercase().as_slice() {
-        b"get" => parse_get(parts, line_end + 2),
-        b"set" => parse_set(parts, buf, line_end),
-        b"delete" => parse_delete(parts, line_end + 2),
-        b"quit" => ParseResult::Complete(Command::Quit, line_end + 2),
-        _ => ParseResult::Error(ProtocolError::InvalidCommand(
+    // Match command (case-insensitive, no allocation)
+    if cmd_eq(cmd_name, b"get") {
+        parse_get(parts, line_end + 2)
+    } else if cmd_eq(cmd_name, b"set") {
+        parse_set(parts, buf, line_end)
+    } else if cmd_eq(cmd_name, b"delete") {
+        parse_delete(parts, line_end + 2)
+    } else if cmd_eq(cmd_name, b"quit") {
+        ParseResult::Complete(Command::Quit, line_end + 2)
+    } else {
+        ParseResult::Error(ProtocolError::InvalidCommand(
             String::from_utf8_lossy(cmd_name).to_string(),
-        )),
+        ))
     }
 }
 
@@ -208,8 +222,8 @@ pub fn parse_storage_command_line(
         _ => return Err(ProtocolError::InvalidCommand("empty command".to_string())),
     };
 
-    // Only handle set command
-    if cmd_name.to_ascii_lowercase().as_slice() != b"set" {
+    // Only handle set command (case-insensitive, no allocation)
+    if !cmd_eq(cmd_name, b"set") {
         return Ok(None);
     }
 

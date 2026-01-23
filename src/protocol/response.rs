@@ -1,6 +1,7 @@
 //! Memcached ASCII protocol response builder
 
 use bytes::BytesMut;
+use itoa::Buffer;
 
 /// Response writer for memcached ASCII protocol
 pub struct ResponseWriter {
@@ -38,13 +39,13 @@ impl ResponseWriter {
     /// Write a VALUE line for get response
     /// Format: VALUE <key> <flags> <bytes>\r\n<data>\r\n
     pub fn value(&mut self, key: &[u8], flags: u32, data: &[u8]) {
+        let mut itoa_buf = Buffer::new();
         self.buf.extend_from_slice(b"VALUE ");
         self.buf.extend_from_slice(key);
         self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(flags.to_string().as_bytes());
+        self.buf.extend_from_slice(itoa_buf.format(flags).as_bytes());
         self.buf.extend_from_slice(b" ");
-        self.buf
-            .extend_from_slice(data.len().to_string().as_bytes());
+        self.buf.extend_from_slice(itoa_buf.format(data.len()).as_bytes());
         self.buf.extend_from_slice(b"\r\n");
         self.buf.extend_from_slice(data);
         self.buf.extend_from_slice(b"\r\n");
