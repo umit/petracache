@@ -6,7 +6,7 @@ High-performance in-memory cache with persistent storage, designed to run behind
 
 ## Why PetraCache?
 
-**The Problem:** Standard memcached is fast but volatile - data is lost on restart. Redis offers persistence but with different protocol and complexity.
+**The Problem:** Memcached is super fast but doesn't persist data. Redis offers persistence but with a different protocol and added complexity.
 
 **The Solution:** PetraCache combines the best of both worlds:
 - **In-Memory Performance**: RocksDB's block cache keeps hot data in memory
