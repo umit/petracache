@@ -2,15 +2,26 @@
 //!
 //! Binary format: [8 bytes: expire_at][4 bytes: flags][N bytes: data]
 //!
-//! TTL Rules (memcached-compatible):
-//! - 0 = never expire
-//! - <= 2592000 (30 days) = relative seconds from now
-//! - > 2592000 = absolute Unix timestamp
+//! ## TTL Rules (memcached-compatible)
+//!
+//! From the memcached protocol specification:
+//! > "An expiration time, in seconds. Can be up to 30 days. After 30 days,
+//! > it is treated as a Unix timestamp."
+//!
+//! - `0` = never expire
+//! - `1..=2592000` (up to 30 days) = relative seconds from now
+//! - `> 2592000` = absolute Unix timestamp
+//!
+//! Reference: <https://github.com/memcached/memcached/wiki/Commands#standard-protocol>
 
 use crate::StorageError;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Maximum relative TTL value (30 days in seconds)
+///
+/// From memcached protocol: expiration times up to 30 days are treated as
+/// relative offsets from current time. Values greater than 30 days are
+/// treated as absolute Unix timestamps.
 const MAX_RELATIVE_TTL: u64 = 2_592_000;
 
 /// Stored value with metadata
@@ -110,6 +121,13 @@ impl StoredValue {
 }
 
 /// Calculate the absolute expiration timestamp from memcached exptime
+///
+/// Implements memcached TTL semantics:
+/// - `0` → never expire (returns 0)
+/// - `1..=2592000` → relative seconds, converted to absolute timestamp
+/// - `>2592000` → already an absolute Unix timestamp, used as-is
+///
+/// See: <https://github.com/memcached/memcached/wiki/Commands#standard-protocol>
 pub fn calculate_expire_at(exptime: u64) -> u64 {
     if exptime == 0 {
         0 // Never expire
@@ -117,7 +135,7 @@ pub fn calculate_expire_at(exptime: u64) -> u64 {
         // Relative time: add to current timestamp
         current_timestamp() + exptime
     } else {
-        // Absolute Unix timestamp
+        // Absolute Unix timestamp (value > 30 days treated as timestamp)
         exptime
     }
 }
