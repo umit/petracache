@@ -11,7 +11,7 @@ use crate::StorageError;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Maximum relative TTL value (30 days in seconds)
-const MAX_RELATIVE_TTL: u64 = 2592000;
+const MAX_RELATIVE_TTL: u64 = 2_592_000;
 
 /// Stored value with metadata
 #[derive(Debug, Clone)]

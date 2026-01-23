@@ -1,4 +1,4 @@
-//! Storage layer for RocksProxy
+//! Storage layer for PetraCache
 
 mod rocks;
 mod value;

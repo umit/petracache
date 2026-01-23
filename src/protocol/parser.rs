@@ -174,7 +174,7 @@ fn parse_set<'a>(
         None => return ParseResult::Error(ProtocolError::InvalidBytesLength),
     };
 
-    let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
+    let noreply = parts.next().is_some_and(|s| s == b"noreply");
 
     // Check if we have enough data for the data block
     let data_start = line_end + 2;
@@ -255,7 +255,7 @@ pub fn parse_storage_command_line(
         .and_then(parse_usize)
         .ok_or(ProtocolError::InvalidBytesLength)?;
 
-    let noreply = parts.next().map(|s| s == b"noreply").unwrap_or(false);
+    let noreply = parts.next().is_some_and(|s| s == b"noreply");
 
     Ok(Some(PendingStorageCommand {
         key: key.to_vec(),

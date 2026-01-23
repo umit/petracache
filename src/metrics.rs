@@ -166,15 +166,13 @@ impl Metrics {
         output.push_str(&format!(
             "\n# HELP petracache_expired_keys_removed_total Keys removed by lazy expiration or background scan\n\
              # TYPE petracache_expired_keys_removed_total counter\n\
-             petracache_expired_keys_removed_total {}\n",
-            expired_removed
+             petracache_expired_keys_removed_total {expired_removed}\n"
         ));
 
         output.push_str(&format!(
             "\n# HELP petracache_ttl_compaction_removed_total Keys removed by TTL compaction filter\n\
              # TYPE petracache_ttl_compaction_removed_total counter\n\
-             petracache_ttl_compaction_removed_total {}\n",
-            compaction_removed
+             petracache_ttl_compaction_removed_total {compaction_removed}\n"
         ));
 
         output

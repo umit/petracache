@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
     info!("Opening RocksDB at {:?}", config.storage.db_path);
     let storage = Arc::new(
         RocksStorage::open(&config.storage)
-            .map_err(|e| anyhow::anyhow!("Failed to open RocksDB: {}", e))?,
+            .map_err(|e| anyhow::anyhow!("Failed to open RocksDB: {e}"))?,
     );
 
     // Initialize metrics

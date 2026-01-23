@@ -62,7 +62,7 @@ impl RocksStorage {
         // Ensure the directory exists
         if let Some(parent) = config.db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
-                StorageError::Internal(format!("Failed to create directory: {}", e))
+                StorageError::Internal(format!("Failed to create directory: {e}"))
             })?;
         }
 

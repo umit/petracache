@@ -1,4 +1,4 @@
-//! Configuration for RocksProxy
+//! Configuration for PetraCache
 
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -116,16 +116,16 @@ impl Config {
     /// Load configuration from a TOML file
     pub fn from_file(path: &str) -> crate::Result<Self> {
         let contents = std::fs::read_to_string(path).map_err(|e| {
-            crate::RocksProxyError::Config(format!("Failed to read config file: {}", e))
+            crate::PetraCacheError::Config(format!("Failed to read config file: {e}"))
         })?;
 
         toml::from_str(&contents)
-            .map_err(|e| crate::RocksProxyError::Config(format!("Failed to parse config: {}", e)))
+            .map_err(|e| crate::PetraCacheError::Config(format!("Failed to parse config: {e}")))
     }
 
     /// Load configuration from environment variables or use defaults
     pub fn from_env() -> Self {
-        let mut config = Config::default();
+        let mut config = Self::default();
 
         if let Ok(addr) = std::env::var("PETRACACHE_LISTEN_ADDR") {
             config.server.listen_addr = addr;

@@ -31,7 +31,7 @@ pub enum Command<'a> {
     Quit,
 }
 
-impl<'a> Command<'a> {
+impl Command<'_> {
     /// Returns true if this command should not send a response
     pub fn is_noreply(&self) -> bool {
         match self {

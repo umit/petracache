@@ -1,96 +1,49 @@
-//! PetraCache - High-performance memcached-compatible cache server backed by RocksDB
+//! # PetraCache
+//!
+//! High-performance memcached-compatible cache server backed by RocksDB.
+//!
+//! *Petra* (πέτρα) means "rock" in Greek - a nod to the RocksDB storage engine.
+//!
+//! ## Features
+//!
+//! - Memcached ASCII protocol support (GET, SET, DELETE, VERSION)
+//! - RocksDB persistent storage with configurable options
+//! - TTL support with lazy expiration and compaction filter
+//! - Prometheus metrics endpoint
+//! - Health check endpoints for load balancer integration
+//! - Designed to work behind mcrouter for routing and failover
+//!
+//! ## Example
+//!
+//! ```ignore
+//! use petracache::config::Config;
+//! use petracache::storage::RocksStorage;
+//! use petracache::server::Server;
+//!
+//! let config = Config::default();
+//! let storage = RocksStorage::open(&config.storage)?;
+//! ```
+//!
+//! ## Architecture
+//!
+//! ```text
+//! ┌──────────────┐     ┌───────────┐     ┌─────────────────────────┐
+//! │ app/service  │────▶│ mcrouter  │────▶│ PetraCache              │
+//! │ (memcache    │     │ (routing, │     │  ├─ ASCII protocol      │
+//! │  client)     │     │  failover)│     │  ├─ TTL support         │
+//! └──────────────┘     └───────────┘     │  └─ RocksDB backend     │
+//!                                        └─────────────────────────┘
+//! ```
 
+// Modules
 pub mod config;
+pub mod error;
 pub mod health;
 pub mod metrics;
+pub mod prelude;
 pub mod protocol;
 pub mod server;
 pub mod storage;
 
-use thiserror::Error;
-
-/// Main error type for RocksProxy
-#[derive(Error, Debug)]
-pub enum RocksProxyError {
-    #[error("Protocol error: {0}")]
-    Protocol(#[from] ProtocolError),
-
-    #[error("Storage error: {0}")]
-    Storage(#[from] StorageError),
-
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("Configuration error: {0}")]
-    Config(String),
-}
-
-/// Protocol parsing errors
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum ProtocolError {
-    #[error("Invalid command: {0}")]
-    InvalidCommand(String),
-
-    #[error("Invalid key: {0}")]
-    InvalidKey(String),
-
-    #[error("Invalid value: {0}")]
-    InvalidValue(String),
-
-    #[error("Invalid flags")]
-    InvalidFlags,
-
-    #[error("Invalid exptime")]
-    InvalidExptime,
-
-    #[error("Invalid bytes length")]
-    InvalidBytesLength,
-
-    #[error("Invalid numeric value")]
-    InvalidNumericValue,
-
-    #[error("Key too long (max 250 bytes)")]
-    KeyTooLong,
-
-    #[error("Value too large")]
-    ValueTooLarge,
-
-    #[error("Unexpected data")]
-    UnexpectedData,
-
-    #[error("Incomplete command")]
-    IncompleteCommand,
-}
-
-/// Storage layer errors
-#[derive(Error, Debug)]
-pub enum StorageError {
-    #[error("RocksDB error: {0}")]
-    RocksDb(#[from] rust_rocksdb::Error),
-
-    #[error("Internal error: {0}")]
-    Internal(String),
-
-    #[error("Value encoding error: {0}")]
-    Encoding(String),
-
-    #[error("Value decoding error: {0}")]
-    Decoding(String),
-
-    #[error("Key not found")]
-    NotFound,
-
-    #[error("Key already exists")]
-    AlreadyExists,
-
-    #[error("Not a numeric value")]
-    NotNumeric,
-
-    #[error("Numeric overflow")]
-    NumericOverflow,
-
-    #[error("Numeric underflow")]
-    NumericUnderflow,
-}
-
-pub type Result<T> = std::result::Result<T, RocksProxyError>;
+// Re-exports for convenience
+pub use error::{PetraCacheError, ProtocolError, Result, StorageError};
