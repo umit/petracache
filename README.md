@@ -1,8 +1,27 @@
 # PetraCache
 
+**Memcached speed. Persistent storage. Zero complexity.**
+
 High-performance in-memory cache with persistent storage, designed to run behind mcrouter. Handle millions of requests per second with data durability.
 
 > *Petra* (πέτρα) means "rock" in Greek - a nod to the RocksDB storage engine.
+
+## Comparison
+
+| Feature | Memcached | Redis | PetraCache |
+|---------|-----------|-------|------------|
+| Protocol | Memcached | Redis | Memcached |
+| Persistence | ❌ | ✅ | ✅ |
+| In-Memory Speed | ✅ | ✅ | ✅ |
+| mcrouter Support | ✅ | ❌ | ✅ |
+| Drop-in Replacement | - | ❌ | ✅ |
+| Complexity | Low | High | Low |
+
+### Key Differentiators
+
+- **Drop-in replacement** for memcached with persistence
+- **Built for mcrouter** - Facebook's battle-tested cache router
+- **Written in Rust** - Memory safe, zero GC pauses, predictable latency
 
 ## Why PetraCache?
 
