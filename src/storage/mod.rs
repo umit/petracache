@@ -3,5 +3,7 @@
 mod rocks;
 mod value;
 
-pub use rocks::{MemoryUsage, RocksStorage, TtlStats, EXPIRED_KEYS_REMOVED, TTL_COMPACTION_REMOVED};
+pub use rocks::{
+    EXPIRED_KEYS_REMOVED, MemoryUsage, RocksStorage, TTL_COMPACTION_REMOVED, TtlStats,
+};
 pub use value::{StoredValue, calculate_expire_at, current_timestamp};

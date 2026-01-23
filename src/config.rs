@@ -127,25 +127,25 @@ impl Config {
     pub fn from_env() -> Self {
         let mut config = Config::default();
 
-        if let Ok(addr) = std::env::var("ROCKSPROXY_LISTEN_ADDR") {
+        if let Ok(addr) = std::env::var("PETRACACHE_LISTEN_ADDR") {
             config.server.listen_addr = addr;
         }
 
-        if let Ok(max_conn) = std::env::var("ROCKSPROXY_MAX_CONNECTIONS")
+        if let Ok(max_conn) = std::env::var("PETRACACHE_MAX_CONNECTIONS")
             && let Ok(n) = max_conn.parse()
         {
             config.server.max_connections = n;
         }
 
-        if let Ok(path) = std::env::var("ROCKSPROXY_DB_PATH") {
+        if let Ok(path) = std::env::var("PETRACACHE_DB_PATH") {
             config.storage.db_path = PathBuf::from(path);
         }
 
-        if let Ok(addr) = std::env::var("ROCKSPROXY_METRICS_ADDR") {
+        if let Ok(addr) = std::env::var("PETRACACHE_METRICS_ADDR") {
             config.metrics.listen_addr = addr;
         }
 
-        if let Ok(enabled) = std::env::var("ROCKSPROXY_METRICS_ENABLED") {
+        if let Ok(enabled) = std::env::var("PETRACACHE_METRICS_ENABLED") {
             config.metrics.enabled = enabled.to_lowercase() == "true" || enabled == "1";
         }
 

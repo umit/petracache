@@ -1,5 +1,22 @@
+# Build artifacts
 /target
+
+# RocksDB data directory
 /data
+
+# IDE
 .idea/
+*.iml
+.vscode/
+
+# Profiling
 *.gz
 *.profraw
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

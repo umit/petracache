@@ -45,45 +45,45 @@ impl Metrics {
     pub fn new() -> Self {
         let registry = Registry::new();
 
-        let cmd_get = IntCounter::new("rocksproxy_cmd_get_total", "Total GET commands").unwrap();
-        let cmd_set = IntCounter::new("rocksproxy_cmd_set_total", "Total SET commands").unwrap();
-        let cmd_add = IntCounter::new("rocksproxy_cmd_add_total", "Total ADD commands").unwrap();
+        let cmd_get = IntCounter::new("petracache_cmd_get_total", "Total GET commands").unwrap();
+        let cmd_set = IntCounter::new("petracache_cmd_set_total", "Total SET commands").unwrap();
+        let cmd_add = IntCounter::new("petracache_cmd_add_total", "Total ADD commands").unwrap();
         let cmd_replace =
-            IntCounter::new("rocksproxy_cmd_replace_total", "Total REPLACE commands").unwrap();
+            IntCounter::new("petracache_cmd_replace_total", "Total REPLACE commands").unwrap();
         let cmd_delete =
-            IntCounter::new("rocksproxy_cmd_delete_total", "Total DELETE commands").unwrap();
-        let cmd_incr = IntCounter::new("rocksproxy_cmd_incr_total", "Total INCR commands").unwrap();
-        let cmd_decr = IntCounter::new("rocksproxy_cmd_decr_total", "Total DECR commands").unwrap();
+            IntCounter::new("petracache_cmd_delete_total", "Total DELETE commands").unwrap();
+        let cmd_incr = IntCounter::new("petracache_cmd_incr_total", "Total INCR commands").unwrap();
+        let cmd_decr = IntCounter::new("petracache_cmd_decr_total", "Total DECR commands").unwrap();
         let cmd_touch =
-            IntCounter::new("rocksproxy_cmd_touch_total", "Total TOUCH commands").unwrap();
+            IntCounter::new("petracache_cmd_touch_total", "Total TOUCH commands").unwrap();
         let cmd_flush =
-            IntCounter::new("rocksproxy_cmd_flush_total", "Total FLUSH_ALL commands").unwrap();
+            IntCounter::new("petracache_cmd_flush_total", "Total FLUSH_ALL commands").unwrap();
 
-        let get_hits = IntCounter::new("rocksproxy_get_hits_total", "Total GET hits").unwrap();
+        let get_hits = IntCounter::new("petracache_get_hits_total", "Total GET hits").unwrap();
         let get_misses =
-            IntCounter::new("rocksproxy_get_misses_total", "Total GET misses").unwrap();
+            IntCounter::new("petracache_get_misses_total", "Total GET misses").unwrap();
 
         let active_connections = IntGauge::new(
-            "rocksproxy_active_connections",
+            "petracache_active_connections",
             "Current active connections",
         )
         .unwrap();
         let total_connections =
-            IntCounter::new("rocksproxy_connections_total", "Total connections accepted").unwrap();
+            IntCounter::new("petracache_connections_total", "Total connections accepted").unwrap();
         let rejected_connections = IntCounter::new(
-            "rocksproxy_rejected_connections_total",
+            "petracache_rejected_connections_total",
             "Total connections rejected",
         )
         .unwrap();
 
         let bytes_read =
-            IntCounter::new("rocksproxy_bytes_read_total", "Total bytes read").unwrap();
+            IntCounter::new("petracache_bytes_read_total", "Total bytes read").unwrap();
         let bytes_written =
-            IntCounter::new("rocksproxy_bytes_written_total", "Total bytes written").unwrap();
+            IntCounter::new("petracache_bytes_written_total", "Total bytes written").unwrap();
 
         let cmd_latency = Histogram::with_opts(
             HistogramOpts::new(
-                "rocksproxy_cmd_latency_seconds",
+                "petracache_cmd_latency_seconds",
                 "Command latency in seconds",
             )
             .buckets(vec![
@@ -93,9 +93,9 @@ impl Metrics {
         .unwrap();
 
         let protocol_errors =
-            IntCounter::new("rocksproxy_protocol_errors_total", "Total protocol errors").unwrap();
+            IntCounter::new("petracache_protocol_errors_total", "Total protocol errors").unwrap();
         let storage_errors =
-            IntCounter::new("rocksproxy_storage_errors_total", "Total storage errors").unwrap();
+            IntCounter::new("petracache_storage_errors_total", "Total storage errors").unwrap();
 
         // Register all metrics
         registry.register(Box::new(cmd_get.clone())).unwrap();
@@ -164,16 +164,16 @@ impl Metrics {
         let compaction_removed = TTL_COMPACTION_REMOVED.load(Ordering::Relaxed);
 
         output.push_str(&format!(
-            "\n# HELP rocksproxy_expired_keys_removed_total Keys removed by lazy expiration or background scan\n\
-             # TYPE rocksproxy_expired_keys_removed_total counter\n\
-             rocksproxy_expired_keys_removed_total {}\n",
+            "\n# HELP petracache_expired_keys_removed_total Keys removed by lazy expiration or background scan\n\
+             # TYPE petracache_expired_keys_removed_total counter\n\
+             petracache_expired_keys_removed_total {}\n",
             expired_removed
         ));
 
         output.push_str(&format!(
-            "\n# HELP rocksproxy_ttl_compaction_removed_total Keys removed by TTL compaction filter\n\
-             # TYPE rocksproxy_ttl_compaction_removed_total counter\n\
-             rocksproxy_ttl_compaction_removed_total {}\n",
+            "\n# HELP petracache_ttl_compaction_removed_total Keys removed by TTL compaction filter\n\
+             # TYPE petracache_ttl_compaction_removed_total counter\n\
+             petracache_ttl_compaction_removed_total {}\n",
             compaction_removed
         ));
 
@@ -259,8 +259,8 @@ mod tests {
         metrics.active_connections.set(5);
 
         let output = metrics.gather();
-        assert!(output.contains("rocksproxy_cmd_get_total"));
-        assert!(output.contains("rocksproxy_active_connections"));
+        assert!(output.contains("petracache_cmd_get_total"));
+        assert!(output.contains("petracache_active_connections"));
     }
 
     #[test]

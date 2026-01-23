@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RocksProxy is a high-performance Rust server that speaks memcached ASCII protocol with RocksDB as the storage backend. Designed to work behind mcrouter for routing and failover.
+PetraCache is a high-performance Rust server that speaks memcached ASCII protocol with RocksDB as the storage backend. Designed to work behind mcrouter for routing and failover.
+
+> *Petra* (πέτρα) means "rock" in Greek - a nod to the RocksDB storage engine.
 
 ```
 ┌──────────────┐     ┌───────────┐     ┌─────────────────────────┐
-│ app/service  │────▶│ mcrouter  │────▶│ RocksProxy (this)       │
+│ app/service  │────▶│ mcrouter  │────▶│ PetraCache (this)       │
 │ (memcache    │     │ (routing, │     │  ├─ ASCII protocol      │
 │  client)     │     │  failover)│     │  ├─ TTL support         │
 └──────────────┘     └───────────┘     │  └─ RocksDB backend     │
@@ -46,7 +48,7 @@ cargo bench                    # Run benchmarks
 
 ## mcrouter Integration
 
-RocksProxy is designed to work behind [mcrouter](https://github.com/facebook/mcrouter), Facebook's memcached protocol router.
+PetraCache is designed to work behind [mcrouter](https://github.com/facebook/mcrouter), Facebook's memcached protocol router.
 
 **Health Check Behavior:**
 - mcrouter uses `version` command to probe server health
@@ -84,9 +86,12 @@ RocksDB value format: `[8 bytes: expire_at][4 bytes: flags][N bytes: data]`
 ```
 src/
 ├── main.rs           # Entry point, server initialization
-├── lib.rs            # Library root, error types (RocksProxyError, StorageError, ProtocolError)
+├── lib.rs            # Library root, error types (PetraCacheError, StorageError, ProtocolError)
 ├── config.rs         # Configuration (ServerConfig, StorageConfig, MetricsConfig)
-├── server.rs         # TCP server, connection handling, command execution
+├── server/
+│   ├── mod.rs        # TCP server, accept loop
+│   ├── connection.rs # Connection handling, read/write loops
+│   └── handler.rs    # Command handlers (handle_get, handle_set, etc.)
 ├── protocol/
 │   ├── mod.rs
 │   ├── parser.rs     # Hand-written ASCII parser (zero-copy with Cow)
@@ -94,7 +99,7 @@ src/
 │   └── response.rs   # ResponseWriter for building memcached responses
 ├── storage/
 │   ├── mod.rs
-│   ├── rocks.rs      # RocksDB backend with spawn_blocking, TTL compaction filter
+│   ├── rocks.rs      # RocksDB backend, TTL compaction filter
 │   └── value.rs      # StoredValue encoding/decoding, TTL calculation
 ├── metrics.rs        # Prometheus metrics + AtomicCounters for hot paths
 └── health.rs         # HTTP health server (/health, /ready, /metrics)

@@ -1,9 +1,9 @@
 [package]
-name = "rocksproxy"
+name = "petracache"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
-description = "High-performance memcached-compatible RocksDB proxy"
+description = "High-performance memcached-compatible cache server backed by RocksDB"
 license = "MIT"
 
 [dependencies]

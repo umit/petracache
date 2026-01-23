@@ -4,8 +4,8 @@ use crate::config::MetricsConfig;
 use crate::metrics::Metrics;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{error, info};
 
 /// Health server state
@@ -91,23 +91,34 @@ impl HealthServer {
         }
 
         match path {
-            "/health" | "/healthz" => {
-                self.send_response(&mut stream, 200, "application/json", r#"{"status":"healthy"}"#)
-            }
+            "/health" | "/healthz" => self.send_response(
+                &mut stream,
+                200,
+                "application/json",
+                r#"{"status":"healthy"}"#,
+            ),
             "/ready" | "/readyz" => {
                 if self.is_ready() {
-                    self.send_response(&mut stream, 200, "application/json", r#"{"status":"ready"}"#)
+                    self.send_response(
+                        &mut stream,
+                        200,
+                        "application/json",
+                        r#"{"status":"ready"}"#,
+                    )
                 } else {
-                    self.send_response(&mut stream, 503, "application/json", r#"{"status":"not ready"}"#)
+                    self.send_response(
+                        &mut stream,
+                        503,
+                        "application/json",
+                        r#"{"status":"not ready"}"#,
+                    )
                 }
             }
             "/metrics" => {
                 let metrics = self.metrics.gather();
                 self.send_response(&mut stream, 200, "text/plain; version=0.0.4", &metrics)
             }
-            _ => {
-                self.send_response(&mut stream, 404, "text/plain", "Not Found")
-            }
+            _ => self.send_response(&mut stream, 404, "text/plain", "Not Found"),
         }
     }
 

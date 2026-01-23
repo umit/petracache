@@ -43,9 +43,11 @@ impl ResponseWriter {
         self.buf.extend_from_slice(b"VALUE ");
         self.buf.extend_from_slice(key);
         self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(itoa_buf.format(flags).as_bytes());
+        self.buf
+            .extend_from_slice(itoa_buf.format(flags).as_bytes());
         self.buf.extend_from_slice(b" ");
-        self.buf.extend_from_slice(itoa_buf.format(data.len()).as_bytes());
+        self.buf
+            .extend_from_slice(itoa_buf.format(data.len()).as_bytes());
         self.buf.extend_from_slice(b"\r\n");
         self.buf.extend_from_slice(data);
         self.buf.extend_from_slice(b"\r\n");

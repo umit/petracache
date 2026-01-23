@@ -1,13 +1,13 @@
-//! RocksProxy - High-performance memcached-compatible RocksDB proxy
+//! PetraCache - High-performance memcached-compatible cache server
 //!
 //! A memcached ASCII protocol compatible server backed by RocksDB storage.
 //! Designed to work behind mcrouter for routing and failover.
 
-use rocksproxy::config::Config;
-use rocksproxy::health::HealthServer;
-use rocksproxy::metrics::Metrics;
-use rocksproxy::server::Server;
-use rocksproxy::storage::RocksStorage;
+use petracache::config::Config;
+use petracache::health::HealthServer;
+use petracache::metrics::Metrics;
+use petracache::server::Server;
+use petracache::storage::RocksStorage;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    info!("Starting RocksProxy");
+    info!("Starting PetraCache");
 
     // Load configuration
     let config = if let Some(config_path) = std::env::args().nth(1) {
@@ -113,6 +113,6 @@ async fn main() -> anyhow::Result<()> {
         error!("Server error: {}", e);
     }
 
-    info!("RocksProxy stopped");
+    info!("PetraCache stopped");
     Ok(())
 }

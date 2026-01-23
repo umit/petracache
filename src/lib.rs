@@ -1,4 +1,4 @@
-//! RocksProxy - High-performance memcached-compatible RocksDB proxy
+//! PetraCache - High-performance memcached-compatible cache server backed by RocksDB
 
 pub mod config;
 pub mod health;

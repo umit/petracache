@@ -111,10 +111,7 @@ fn find_crlf(buf: &[u8]) -> Option<usize> {
 }
 
 /// Parse get command
-fn parse_get<'a>(
-    mut parts: impl Iterator<Item = &'a [u8]>,
-    consumed: usize,
-) -> ParseResult<'a> {
+fn parse_get<'a>(mut parts: impl Iterator<Item = &'a [u8]>, consumed: usize) -> ParseResult<'a> {
     let mut keys = Vec::new();
 
     for part in parts.by_ref() {
