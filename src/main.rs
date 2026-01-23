@@ -73,46 +73,6 @@ async fn main() -> anyhow::Result<()> {
         cancel_token.clone(),
     ));
 
-    // Start background TTL scan if enabled
-    if config.storage.ttl_scan_interval_secs > 0 {
-        let scan_storage = Arc::clone(&storage);
-        let scan_cancel = cancel_token.clone();
-        let scan_interval = config.storage.ttl_scan_interval_secs;
-        let scan_batch_size = config.storage.ttl_scan_batch_size;
-
-        tokio::spawn(async move {
-            info!(
-                interval_secs = scan_interval,
-                batch_size = scan_batch_size,
-                "Starting background TTL scanner"
-            );
-
-            let mut interval = tokio::time::interval(
-                tokio::time::Duration::from_secs(scan_interval)
-            );
-
-            loop {
-                tokio::select! {
-                    _ = scan_cancel.cancelled() => {
-                        info!("Background TTL scanner stopping");
-                        break;
-                    }
-                    _ = interval.tick() => {
-                        match scan_storage.scan_expired_keys(scan_batch_size) {
-                            Ok(removed) if removed > 0 => {
-                                info!(removed = removed, "Background TTL scan removed expired keys");
-                            }
-                            Err(e) => {
-                                error!("Background TTL scan error: {}", e);
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        });
-    }
-
     // Mark as ready after initialization
     if let Some(ref health) = health_server {
         health.set_ready(true);

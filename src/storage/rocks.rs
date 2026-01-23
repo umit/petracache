@@ -192,50 +192,6 @@ impl RocksStorage {
             "Manual compaction completed"
         );
     }
-
-    /// Scan and remove expired keys (background TTL cleanup)
-    /// Returns the number of keys removed
-    ///
-    /// `batch_size`: Max keys to scan per call (for rate limiting)
-    pub fn scan_expired_keys(&self, batch_size: usize) -> Result<usize, StorageError> {
-        let mut removed = 0;
-        let now = current_timestamp();
-        let iter = self.db.iterator(rust_rocksdb::IteratorMode::Start);
-
-        for item in iter.take(batch_size) {
-            let (key, value) = item?;
-
-            // Check if value has valid TTL header (at least 8 bytes)
-            if value.len() >= 8 {
-                let expire_at = u64::from_le_bytes(
-                    value[0..8].try_into().unwrap_or([0; 8])
-                );
-
-                // If expired, delete it
-                if expire_at != 0 && now >= expire_at {
-                    self.db.delete(&key)?;
-                    EXPIRED_KEYS_REMOVED.fetch_add(1, Ordering::Relaxed);
-                    removed += 1;
-                    trace!(
-                        key = %String::from_utf8_lossy(&key),
-                        expire_at = expire_at,
-                        "Background scan: removed expired key"
-                    );
-                }
-            }
-        }
-
-        if removed > 0 {
-            info!(removed = removed, "TTL scan completed");
-        }
-
-        Ok(removed)
-    }
-
-    /// Get the underlying DB Arc (for background tasks)
-    pub fn db(&self) -> Arc<DB> {
-        Arc::clone(&self.db)
-    }
 }
 
 /// TTL expiration statistics
@@ -280,8 +236,6 @@ mod tests {
             max_background_jobs: 2,
             enable_compression: false,
             enable_ttl_compaction: false,
-            ttl_scan_interval_secs: 0,
-            ttl_scan_batch_size: 1000,
         }
     }
 
