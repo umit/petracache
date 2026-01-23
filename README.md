@@ -20,7 +20,8 @@ High-performance in-memory cache with persistent storage, designed to run behind
 ### Key Differentiators
 
 - **Drop-in replacement** for memcached with persistence
-- **Built for mcrouter** - Facebook's battle-tested cache router
+- **Horizontal scaling** with mcrouter - add nodes, scale linearly to millions of TPS
+- **Built for mcrouter** - Facebook's battle-tested cache router used at scale
 - **Written in Rust** - Memory safe, zero GC pauses, predictable latency
 
 ## Why PetraCache?
@@ -55,9 +56,10 @@ High-performance in-memory cache with persistent storage, designed to run behind
 
 - **In-Memory + Persistent**: Hot data in memory via RocksDB block cache, all data persisted to disk
 - **Memcached Protocol**: Drop-in replacement for memcached, works with any memcached client
-- **mcrouter Integration**: Designed for distributed caching with Facebook's mcrouter
+- **Horizontal Scaling**: Scale to millions of TPS by adding nodes behind mcrouter
+- **mcrouter Native**: Built for Facebook's battle-tested cache router with consistent hashing
 - **TTL Support**: Memcached-compatible expiration (lazy deletion + compaction filter)
-- **High Performance**: Zero-copy parsing, efficient buffer management, async I/O
+- **High Performance**: Zero-copy parsing, efficient buffer management, async I/O with Tokio
 - **Production Ready**: Prometheus metrics, health checks, graceful shutdown
 - **Configurable Memory**: Tune block cache size based on your memory budget
 
