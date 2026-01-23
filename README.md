@@ -1,6 +1,6 @@
 # PetraCache
 
-High-performance in-memory cache with persistent storage, designed to run behind mcrouter.
+High-performance in-memory cache with persistent storage, designed to run behind mcrouter. Handle millions of requests per second with data durability.
 
 > *Petra* (πέτρα) means "rock" in Greek - a nod to the RocksDB storage engine.
 
@@ -170,7 +170,11 @@ When metrics are enabled, the following endpoints are available:
 | `/ready` | Readiness probe |
 | `/metrics` | Prometheus metrics |
 
-## Performance Targets
+## Performance
+
+PetraCache is designed for high-throughput scenarios. When deployed behind mcrouter with multiple instances, you can scale horizontally to handle **millions of requests per second**.
+
+### Single Instance Targets
 
 | Metric | Target |
 |--------|--------|
@@ -179,6 +183,22 @@ When metrics are enabled, the following endpoints are available:
 | Latency p99 | <2ms |
 | Latency p99.9 | <5ms |
 | Connections | 10K+ |
+
+### Horizontal Scaling with mcrouter
+
+```
+                         ┌─────────────────┐
+                    ┌───▶│ PetraCache #1   │
+                    │    └─────────────────┘
+┌─────────────┐     │    ┌─────────────────┐
+│  mcrouter   │─────┼───▶│ PetraCache #2   │  = Millions of TPS
+└─────────────┘     │    └─────────────────┘
+                    │    ┌─────────────────┐
+                    └───▶│ PetraCache #N   │
+                         └─────────────────┘
+```
+
+Scale by adding more PetraCache instances behind mcrouter with consistent hashing.
 
 ## Benchmarking
 
