@@ -27,14 +27,14 @@ PetraCache speaks the memcached ASCII protocol and uses RocksDB as its storage b
 
 ## Requirements
 
-- Rust 1.92+ (Edition 2024)
+- Rust 1.85+ (Edition 2024)
 - C++ compiler (for RocksDB compilation)
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/petracache.git
+git clone https://github.com/umit/petracache.git
 cd petracache
 
 # Build release version
@@ -70,21 +70,31 @@ echo -e "get foo\r\n" | nc localhost 11211
 
 ## Supported Commands
 
+### Implemented
+
 | Command | Format | Description |
 |---------|--------|-------------|
 | `get` | `get <key>*` | Retrieve one or more keys |
-| `gets` | `gets <key>*` | Retrieve with CAS token |
 | `set` | `set <key> <flags> <exptime> <bytes> [noreply]` | Store a key |
-| `add` | `add <key> <flags> <exptime> <bytes> [noreply]` | Store if not exists |
-| `replace` | `replace <key> <flags> <exptime> <bytes> [noreply]` | Store if exists |
 | `delete` | `delete <key> [noreply]` | Delete a key |
+| `version` | `version` | Server version (used by mcrouter health checks) |
+| `quit` | `quit` | Close connection |
+
+### Planned
+
+| Command | Format | Description |
+|---------|--------|-------------|
+| `add` | `add <key> <flags> <exptime> <bytes> [noreply]` | Store only if key doesn't exist |
+| `replace` | `replace <key> <flags> <exptime> <bytes> [noreply]` | Store only if key exists |
+| `append` | `append <key> <flags> <exptime> <bytes> [noreply]` | Append data to existing key |
+| `prepend` | `prepend <key> <flags> <exptime> <bytes> [noreply]` | Prepend data to existing key |
 | `incr` | `incr <key> <value> [noreply]` | Increment numeric value |
 | `decr` | `decr <key> <value> [noreply]` | Decrement numeric value |
-| `touch` | `touch <key> <exptime> [noreply]` | Update expiration |
-| `flush_all` | `flush_all [delay] [noreply]` | Invalidate all keys |
-| `version` | `version` | Server version |
+| `touch` | `touch <key> <exptime> [noreply]` | Update expiration time |
+| `gets` | `gets <key>*` | Retrieve with CAS token |
+| `cas` | `cas <key> <flags> <exptime> <bytes> <cas> [noreply]` | Compare and swap |
 | `stats` | `stats` | Server statistics |
-| `quit` | `quit` | Close connection |
+| `flush_all` | `flush_all [delay] [noreply]` | Invalidate all keys |
 
 ## Configuration
 
@@ -169,23 +179,25 @@ memtier_benchmark \
 ```
 src/
 ├── main.rs           # Entry point
-├── lib.rs            # Library root, error types
+├── lib.rs            # Library root
+├── error.rs          # Error types (PetraCacheError, ProtocolError, StorageError)
+├── prelude.rs        # Common imports
 ├── config.rs         # Configuration handling
 ├── server/
-│   ├── mod.rs        # TCP server
-│   ├── connection.rs # Connection handling
+│   ├── mod.rs        # TCP server, accept loop
+│   ├── connection.rs # Connection handling, read/write loops
 │   └── handler.rs    # Command handlers
 ├── protocol/
 │   ├── mod.rs
-│   ├── parser.rs     # ASCII protocol parser
+│   ├── parser.rs     # Hand-written ASCII protocol parser
 │   ├── command.rs    # Command definitions
 │   └── response.rs   # Response formatting
 ├── storage/
 │   ├── mod.rs
-│   ├── rocks.rs      # RocksDB backend
+│   ├── rocks.rs      # RocksDB backend, TTL compaction filter
 │   └── value.rs      # Value encoding/decoding
 ├── metrics.rs        # Prometheus metrics
-└── health.rs         # Health check server
+└── health.rs         # HTTP health server (/health, /ready, /metrics)
 ```
 
 ## Building from Source
