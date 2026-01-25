@@ -9,12 +9,12 @@ use petracache::metrics::Metrics;
 use petracache::server::Server;
 use petracache::storage::RocksStorage;
 use std::sync::Arc;
+use tokio::runtime::Builder;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(
@@ -29,12 +29,26 @@ async fn main() -> anyhow::Result<()> {
         info!("Loading configuration from {}", config_path);
         Config::from_file(&config_path)?
     } else {
-        info!("Using default configuration (set ROCKSPROXY_* env vars to customize)");
+        info!("Using default configuration (set PETRACACHE_* env vars to customize)");
         Config::from_env()
     };
 
     info!("Configuration: {:?}", config);
 
+    // Build tokio runtime with configured worker threads
+    let mut runtime_builder = Builder::new_multi_thread();
+    if config.server.worker_threads > 0 {
+        runtime_builder.worker_threads(config.server.worker_threads);
+        info!("Using {} worker threads", config.server.worker_threads);
+    } else {
+        info!("Using default worker threads (auto-detected)");
+    }
+    let runtime = runtime_builder.enable_all().build()?;
+
+    runtime.block_on(async_main(config))
+}
+
+async fn async_main(config: Config) -> anyhow::Result<()> {
     // Create cancellation token for graceful shutdown
     let cancel_token = CancellationToken::new();
 

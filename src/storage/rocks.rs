@@ -47,11 +47,17 @@ impl RocksStorage {
             opts.set_compression_type(rust_rocksdb::DBCompressionType::None);
         }
 
-        // Block cache
+        // Block cache with optimized settings
         let mut block_opts = BlockBasedOptions::default();
         let cache = rust_rocksdb::Cache::new_lru_cache(config.block_cache_size);
         block_opts.set_block_cache(&cache);
         block_opts.set_bloom_filter(10.0, false);
+        // Cache index and filter blocks in block cache (reduces disk I/O)
+        block_opts.set_cache_index_and_filter_blocks(true);
+        // Pin L0 filter and index blocks (prevents eviction of hot data)
+        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
+        // Larger block size reduces metadata overhead
+        block_opts.set_block_size(16 * 1024);
         opts.set_block_based_table_factory(&block_opts);
 
         // TTL compaction filter
@@ -99,17 +105,21 @@ impl RocksStorage {
         }
     }
 
-    /// Get multiple values by keys
+    /// Get multiple values by keys using batched MultiGet API
     pub fn get_multi(
         &self,
         keys: &[Vec<u8>],
     ) -> Result<Vec<(Vec<u8>, Option<StoredValue>)>, StorageError> {
+        // Use RocksDB's native multi_get for better performance
+        // (batches lookups, reduces mutex contention, enables parallel I/O)
+        let raw_results = self.db.multi_get(keys);
+
         let mut results = Vec::with_capacity(keys.len());
         let mut expired_keys = Vec::new();
 
-        for key in keys {
-            match self.db.get(key)? {
-                Some(bytes) => {
+        for (key, raw_result) in keys.iter().zip(raw_results.into_iter()) {
+            match raw_result {
+                Ok(Some(bytes)) => {
                     let value = StoredValue::decode(&bytes)?;
                     if value.is_expired() {
                         expired_keys.push(key.clone());
@@ -118,19 +128,25 @@ impl RocksStorage {
                         results.push((key.clone(), Some(value)));
                     }
                 }
-                None => {
+                Ok(None) => {
                     results.push((key.clone(), None));
+                }
+                Err(e) => {
+                    return Err(StorageError::RocksDb(e));
                 }
             }
         }
 
-        for key in &expired_keys {
-            EXPIRED_KEYS_REMOVED.fetch_add(1, Ordering::Relaxed);
-            info!(
-                key = %String::from_utf8_lossy(key),
-                "Lazy expiration: removed expired key"
-            );
-            let _ = self.db.delete(key);
+        // Batch delete expired keys (lazy expiration)
+        if !expired_keys.is_empty() {
+            EXPIRED_KEYS_REMOVED.fetch_add(expired_keys.len() as u64, Ordering::Relaxed);
+            for key in &expired_keys {
+                trace!(
+                    key = %String::from_utf8_lossy(key),
+                    "Lazy expiration: removed expired key"
+                );
+                let _ = self.db.delete(key);
+            }
         }
 
         Ok(results)
