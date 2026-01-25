@@ -162,12 +162,14 @@ impl RocksStorage {
     /// Delete a key
     ///
     /// Returns `true` if the key existed, `false` otherwise.
+    /// Note: This is not fully atomic - between get and delete another thread
+    /// could modify the key. For memcached semantics this is acceptable.
     pub fn delete(&self, key: &[u8]) -> Result<bool, StorageError> {
-        let exists = self.db.get(key)?.is_some();
-        if exists {
-            self.db.delete(key)?;
-        }
-        Ok(exists)
+        let existed = self.db.get(key)?.is_some();
+        // Always call delete - RocksDB delete is idempotent
+        // This avoids the race where key is deleted between get and delete
+        self.db.delete(key)?;
+        Ok(existed)
     }
 
     /// Get memory usage statistics

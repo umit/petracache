@@ -115,7 +115,8 @@ pub async fn handle(
     Ok(())
 }
 
-/// Find \r\n in buffer
+/// Find \r\n in buffer using SIMD-accelerated search
+#[inline]
 fn find_crlf(buf: &[u8]) -> Option<usize> {
-    (0..buf.len().saturating_sub(1)).find(|&i| buf[i] == b'\r' && buf[i + 1] == b'\n')
+    memchr::memchr(b'\r', buf).filter(|&i| buf.get(i + 1) == Some(&b'\n'))
 }
