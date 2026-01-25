@@ -17,6 +17,35 @@ PetraCache is a high-performance Rust server that speaks memcached ASCII protoco
                                        └─────────────────────────┘
 ```
 
+## What is mcrouter?
+
+[mcrouter](https://github.com/facebook/mcrouter) is Facebook's open-source memcached protocol router. At Facebook scale:
+
+- **5 billion requests/second** across thousands of memcached servers
+- Powers Facebook, Instagram, WhatsApp caching infrastructure
+- Battle-tested at extreme scale since 2013
+
+**Why PetraCache sits behind mcrouter:**
+
+| Feature | mcrouter handles | PetraCache handles |
+|---------|------------------|-------------------|
+| Sharding | Consistent hashing across nodes | Single node storage |
+| Replication | Replicate writes to N servers | Store data reliably |
+| Failover | Detect failures, route to replicas | Respond to health checks |
+| Connection pooling | Multiplex client connections | Handle fewer connections |
+| Request routing | Prefix routing, shadow traffic | Execute commands |
+
+**mcrouter does the distributed systems work**, PetraCache focuses on being a fast, reliable single-node cache with persistence.
+
+```
+Client request flow:
+1. App sends "get user:123" to mcrouter
+2. mcrouter hashes "user:123" → determines target server
+3. mcrouter sends request to PetraCache node
+4. PetraCache reads from RocksDB, returns value
+5. mcrouter returns response to app
+```
+
 ## Build Commands
 
 ```bash
