@@ -25,6 +25,16 @@ PetraCache is a high-performance Rust server that speaks memcached ASCII protoco
 - Powers Facebook, Instagram, WhatsApp caching infrastructure
 - Battle-tested at extreme scale since 2013
 
+**mcrouter capabilities (out of the box):**
+
+- **Autoscaling**: Add/remove nodes with minimal key redistribution (consistent hashing)
+- **Multi-zone/Multi-region**: Route to nearest zone, cross-region replication
+- **Replication**: Synchronous or async writes to N replicas
+- **Failover**: Automatic detection (TKO), instant routing to healthy replicas
+- **Traffic splitting**: A/B testing, shadow traffic, gradual rollouts
+- **Connection pooling**: Thousands of app connections → fewer backend connections
+- **Request collapsing**: Deduplicate identical concurrent requests
+
 **Why PetraCache sits behind mcrouter:**
 
 | Feature | mcrouter handles | PetraCache handles |
@@ -34,6 +44,7 @@ PetraCache is a high-performance Rust server that speaks memcached ASCII protoco
 | Failover | Detect failures, route to replicas | Respond to health checks |
 | Connection pooling | Multiplex client connections | Handle fewer connections |
 | Request routing | Prefix routing, shadow traffic | Execute commands |
+| Multi-zone | Route to nearest datacenter | Be fast in one zone |
 
 **mcrouter does the distributed systems work**, PetraCache focuses on being a fast, reliable single-node cache with persistence.
 
