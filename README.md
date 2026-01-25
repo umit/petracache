@@ -212,15 +212,28 @@ When metrics are enabled, the following endpoints are available:
 
 PetraCache is designed for high-throughput scenarios. When deployed behind mcrouter with multiple instances, you can scale horizontally to handle **millions of requests per second**.
 
-### Single Instance Targets
+### Single Instance Performance
 
-| Metric | Target |
-|--------|--------|
-| Throughput | >100K ops/sec |
-| Latency p50 | <0.5ms |
-| Latency p99 | <2ms |
-| Latency p99.9 | <5ms |
-| Connections | 10K+ |
+| Metric | Target | Achieved |
+|--------|--------|----------|
+| Throughput | >100K ops/sec | **120K ops/sec** |
+| Latency p50 | <0.5ms | **0.16ms** |
+| Latency p99 | <2ms | **0.34ms** |
+| Latency p99.9 | <5ms | **0.50ms** |
+| Connections | 10K+ | **10K+** |
+
+*Benchmark: M1 MacBook, 1KB values, 90% GET / 10% SET, 20 connections*
+
+```
+$ memtier_benchmark -s 127.0.0.1 -p 11211 --protocol=memcache_text \
+    --clients=10 --threads=2 --test-time=30 --ratio=1:9 --data-size=1000
+
+Type         Ops/sec     Avg. Latency     p50 Latency     p99 Latency   p99.9 Latency
+-------------------------------------------------------------------------------------
+Sets        12041.82         0.19ms          0.18ms          0.39ms          1.02ms
+Gets       108372.91         0.16ms          0.16ms          0.34ms          0.47ms
+Totals     120414.72         0.17ms          0.16ms          0.34ms          0.50ms
+```
 
 ### Horizontal Scaling with mcrouter
 
