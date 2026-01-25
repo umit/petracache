@@ -43,6 +43,22 @@ High-performance in-memory cache with persistent storage, designed to run behind
                                        └─────────────────────────┘
 ```
 
+## mcrouter: Battle-Tested at Scale
+
+[mcrouter](https://github.com/facebook/mcrouter) is Facebook's open-source memcached protocol router, handling **5 billion requests/second** at Facebook, Instagram, and WhatsApp.
+
+**mcrouter provides (out of the box):**
+
+- **Autoscaling**: Add/remove nodes with minimal key redistribution (consistent hashing)
+- **Multi-zone/Multi-region**: Route to nearest zone, cross-region replication
+- **Replication**: Synchronous or async writes to N replicas
+- **Failover**: Automatic detection (TKO), instant routing to healthy replicas
+- **Traffic splitting**: A/B testing, shadow traffic, gradual rollouts
+- **Connection pooling**: Thousands of app connections → fewer backend connections
+- **Request collapsing**: Deduplicate identical concurrent requests
+
+**PetraCache + mcrouter = production-ready distributed cache** without building distributed systems from scratch.
+
 ## Use Cases
 
 - **High-Traffic Web Applications**: Handle millions of requests with sub-millisecond latency
