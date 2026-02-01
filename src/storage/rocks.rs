@@ -5,7 +5,7 @@
 use crate::StorageError;
 use crate::config::StorageConfig;
 use crate::storage::value::{StoredValue, current_timestamp};
-use rust_rocksdb::{BlockBasedOptions, CompactionDecision, DB, DBCompactionStyle, Options, WriteOptions};
+use rust_rocksdb::{BlockBasedOptions, CompactionDecision, DB, DBCompactionStyle, LogLevel, Options, WriteOptions};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::{info, trace};
@@ -41,6 +41,11 @@ impl RocksStorage {
         opts.set_max_write_buffer_number(config.max_write_buffer_number);
         opts.set_target_file_size_base(config.target_file_size_base);
         opts.set_compaction_style(DBCompactionStyle::Level);
+
+        // RocksDB LOG file settings
+        opts.set_log_level(parse_log_level(&config.rocksdb_log_level));
+        opts.set_max_log_file_size(config.rocksdb_max_log_file_size);
+        opts.set_keep_log_file_num(config.rocksdb_keep_log_file_num);
 
         if config.enable_compression {
             opts.set_compression_type(rust_rocksdb::DBCompressionType::Lz4);
@@ -221,6 +226,18 @@ pub struct TtlStats {
     pub compaction_removed: u64,
 }
 
+fn parse_log_level(level: &str) -> LogLevel {
+    match level.to_lowercase().as_str() {
+        "debug" => LogLevel::Debug,
+        "info" => LogLevel::Info,
+        "warn" => LogLevel::Warn,
+        "error" => LogLevel::Error,
+        "fatal" => LogLevel::Fatal,
+        "header" => LogLevel::Header,
+        _ => LogLevel::Error,
+    }
+}
+
 /// TTL compaction filter - removes expired entries during compaction
 fn ttl_compaction_filter(_level: u32, _key: &[u8], value: &[u8]) -> CompactionDecision {
     if value.len() >= 8 {
@@ -249,6 +266,9 @@ mod tests {
             max_background_jobs: 2,
             enable_compression: false,
             enable_ttl_compaction: false,
+            rocksdb_log_level: "error".to_string(),
+            rocksdb_max_log_file_size: 10 * 1024 * 1024,
+            rocksdb_keep_log_file_num: 5,
         }
     }
 

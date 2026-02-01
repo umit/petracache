@@ -75,6 +75,15 @@ pub struct StorageConfig {
 
     /// Enable TTL compaction filter (runs during RocksDB compaction)
     pub enable_ttl_compaction: bool,
+
+    /// RocksDB log level: debug, info, warn, error, fatal, header
+    pub rocksdb_log_level: String,
+
+    /// Maximum RocksDB log file size in bytes (0 = unlimited)
+    pub rocksdb_max_log_file_size: usize,
+
+    /// Number of RocksDB log files to keep
+    pub rocksdb_keep_log_file_num: usize,
 }
 
 impl Default for StorageConfig {
@@ -88,6 +97,9 @@ impl Default for StorageConfig {
             max_background_jobs: 4,
             enable_compression: false,
             enable_ttl_compaction: true,
+            rocksdb_log_level: "error".to_string(),
+            rocksdb_max_log_file_size: 10 * 1024 * 1024, // 10MB
+            rocksdb_keep_log_file_num: 5,
         }
     }
 }
