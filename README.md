@@ -81,7 +81,7 @@ High-performance in-memory cache with persistent storage, designed to run behind
 
 ## Requirements
 
-- Rust 1.85+ (Edition 2024)
+- Rust 1.92+ (Edition 2024)
 - C++ compiler (for RocksDB compilation)
 
 ## Installation
@@ -216,23 +216,23 @@ PetraCache is designed for high-throughput scenarios. When deployed behind mcrou
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| Throughput | >100K ops/sec | **120K ops/sec** |
-| Latency p50 | <0.5ms | **0.16ms** |
-| Latency p99 | <2ms | **0.34ms** |
-| Latency p99.9 | <5ms | **0.50ms** |
+| Throughput | >100K ops/sec | **137K ops/sec** |
+| Latency p50 | <0.5ms | **0.14ms** |
+| Latency p99 | <2ms | **0.35ms** |
+| Latency p99.9 | <5ms | **0.47ms** |
 | Connections | 10K+ | **10K+** |
 
-*Benchmark: M1 MacBook, 1KB values, 90% GET / 10% SET, 20 connections*
+*Benchmark: Apple Silicon, 1KB values, 50% GET / 50% SET, 20 connections*
 
 ```
 $ memtier_benchmark -s 127.0.0.1 -p 11211 --protocol=memcache_text \
-    --clients=10 --threads=2 --test-time=30 --ratio=1:9 --data-size=1000
+    --clients=10 --threads=2 --test-time=30 --ratio=1:1 --data-size=1000
 
 Type         Ops/sec     Avg. Latency     p50 Latency     p99 Latency   p99.9 Latency
 -------------------------------------------------------------------------------------
-Sets        12041.82         0.19ms          0.18ms          0.39ms          1.02ms
-Gets       108372.91         0.16ms          0.16ms          0.34ms          0.47ms
-Totals     120414.72         0.17ms          0.16ms          0.34ms          0.50ms
+Sets        68504.04         0.15ms          0.14ms          0.37ms          0.49ms
+Gets        68503.77         0.14ms          0.14ms          0.33ms          0.44ms
+Totals     137007.81         0.15ms          0.14ms          0.35ms          0.47ms
 ```
 
 ### Horizontal Scaling with mcrouter
@@ -251,16 +251,6 @@ Totals     120414.72         0.17ms          0.16ms          0.34ms          0.5
 
 Scale by adding more PetraCache instances behind mcrouter with consistent hashing.
 
-## Benchmarking
-
-```bash
-memtier_benchmark \
-  -s 127.0.0.1 -p 11211 \
-  --protocol=memcache_text \
-  --clients=50 --threads=4 \
-  --test-time=60 --ratio=1:1 --data-size=100
-```
-
 ## Project Structure
 
 ```
@@ -268,7 +258,6 @@ src/
 ├── main.rs           # Entry point
 ├── lib.rs            # Library root
 ├── error.rs          # Error types (PetraCacheError, ProtocolError, StorageError)
-├── prelude.rs        # Common imports
 ├── config.rs         # Configuration handling
 ├── server/
 │   ├── mod.rs        # TCP server, accept loop
