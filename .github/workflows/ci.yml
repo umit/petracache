@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Clear macOS-specific flags
+        run: |
+          echo "CXXFLAGS=" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=" >> $GITHUB_ENV
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential clang libclang-dev
+
+      - run: cargo check
+      - run: cargo test
+      - run: cargo clippy -- -D warnings
