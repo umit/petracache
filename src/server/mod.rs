@@ -8,7 +8,7 @@ use crate::metrics::Metrics;
 use crate::storage::RocksStorage;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
@@ -41,7 +41,7 @@ impl Server {
         }
     }
 
-    /// Run the server
+    /// Run the server: bind and accept connections until shutdown signal
     pub async fn run(self: Arc<Self>) -> anyhow::Result<()> {
         let addr: SocketAddr = self.config.listen_addr.parse()?;
         let listener = TcpListener::bind(addr).await?;
@@ -55,42 +55,40 @@ impl Server {
                 }
                 result = listener.accept() => {
                     match result {
-                        Ok((stream, peer_addr)) => {
-                            // Disable Nagle's algorithm for lower latency
-                            if let Err(e) = stream.set_nodelay(true) {
-                                warn!("Failed to set TCP_NODELAY: {}", e);
-                            }
-
-                            // Try to acquire connection permit
-                            match self.connection_semaphore.clone().try_acquire_owned() {
-                                Ok(permit) => {
-                                    self.metrics.total_connections.inc();
-                                    self.metrics.active_connections.inc();
-                                    debug!("Accepted connection from {}", peer_addr);
-
-                                    let server = Arc::clone(&self);
-                                    tokio::spawn(async move {
-                                        if let Err(e) = connection::handle(server, stream, permit).await {
-                                            debug!("Connection error: {}", e);
-                                        }
-                                    });
-                                }
-                                Err(_) => {
-                                    // Connection limit reached
-                                    self.metrics.rejected_connections.inc();
-                                    warn!("Connection limit reached, rejecting connection from {}", peer_addr);
-                                    drop(stream);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            error!("Accept error: {}", e);
-                        }
+                        Ok((stream, peer_addr)) => self.handle_new_connection(stream, peer_addr),
+                        Err(e) => error!("Accept error: {}", e),
                     }
                 }
             }
         }
 
         Ok(())
+    }
+
+    /// Set up a new connection: configure socket, check limits, spawn handler
+    fn handle_new_connection(self: &Arc<Self>, stream: TcpStream, peer_addr: SocketAddr) {
+        if let Err(e) = stream.set_nodelay(true) {
+            warn!("Failed to set TCP_NODELAY: {}", e);
+        }
+
+        match self.connection_semaphore.clone().try_acquire_owned() {
+            Ok(permit) => {
+                self.metrics.total_connections.inc();
+                self.metrics.active_connections.inc();
+                debug!("Accepted connection from {}", peer_addr);
+
+                let server = Arc::clone(self);
+                tokio::spawn(async move {
+                    if let Err(e) = connection::handle(server, stream, permit).await {
+                        debug!("Connection error: {}", e);
+                    }
+                });
+            }
+            Err(_) => {
+                self.metrics.rejected_connections.inc();
+                warn!("Connection limit reached, rejecting {}", peer_addr);
+                drop(stream);
+            }
+        }
     }
 }

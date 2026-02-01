@@ -133,7 +133,7 @@ pub fn calculate_expire_at(exptime: u64) -> u64 {
         0 // Never expire
     } else if exptime <= MAX_RELATIVE_TTL {
         // Relative time: add to current timestamp
-        current_timestamp() + exptime
+        current_timestamp().saturating_add(exptime)
     } else {
         // Absolute Unix timestamp (value > 30 days treated as timestamp)
         exptime

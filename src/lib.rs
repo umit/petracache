@@ -40,7 +40,6 @@ pub mod config;
 pub mod error;
 pub mod health;
 pub mod metrics;
-pub mod prelude;
 pub mod protocol;
 pub mod server;
 pub mod storage;

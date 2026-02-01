@@ -222,17 +222,12 @@ pub struct TtlStats {
 }
 
 /// TTL compaction filter - removes expired entries during compaction
-fn ttl_compaction_filter(_level: u32, key: &[u8], value: &[u8]) -> CompactionDecision {
+fn ttl_compaction_filter(_level: u32, _key: &[u8], value: &[u8]) -> CompactionDecision {
     if value.len() >= 8 {
         let expire_at = u64::from_le_bytes(value[0..8].try_into().unwrap_or([0; 8]));
 
         if expire_at != 0 && current_timestamp() >= expire_at {
             TTL_COMPACTION_REMOVED.fetch_add(1, Ordering::Relaxed);
-            trace!(
-                key = %String::from_utf8_lossy(key),
-                expire_at = expire_at,
-                "TTL compaction: removing expired key"
-            );
             return CompactionDecision::Remove;
         }
     }
