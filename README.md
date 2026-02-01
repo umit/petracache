@@ -21,14 +21,14 @@ High-performance in-memory cache with persistent storage, designed to run behind
 
 - **Drop-in replacement** for memcached with persistence
 - **Horizontal scaling** with mcrouter - add nodes, scale linearly to millions of TPS
-- **Built for mcrouter** - Facebook's battle-tested cache router used at scale
+- **Built for mcrouter** - Meta's battle-tested cache router used at scale
 - **Written in Rust** - Memory safe, zero GC pauses, predictable latency
 
 ## Why Memcached Protocol?
 
 Memcached is the simplest cache protocol: `get`, `set`, `delete`. Nothing more.
 
-With mcrouter in front, you get sharding, replication, and failover for free — no client-side complexity, no cluster management. Facebook serves 5 billion requests/second this way.
+With mcrouter in front, you get sharding, replication, and failover for free — no client-side complexity, no cluster management. Meta serves 5 billion requests/second this way.
 
 PetraCache adds persistence to this stack. Same protocol, same tools, same mcrouter config — but data survives restarts.
 
@@ -53,7 +53,7 @@ PetraCache adds persistence to this stack. Same protocol, same tools, same mcrou
 
 ## mcrouter: Battle-Tested at Scale
 
-[mcrouter](https://github.com/facebook/mcrouter) is Facebook's open-source memcached protocol router, handling **5 billion requests/second** at Facebook, Instagram, and WhatsApp.
+[mcrouter](https://github.com/facebook/mcrouter) is Meta's open-source memcached protocol router, handling **5 billion requests/second** at Meta (Facebook, Instagram, WhatsApp).
 
 **mcrouter provides (out of the box):**
 
@@ -81,7 +81,7 @@ PetraCache adds persistence to this stack. Same protocol, same tools, same mcrou
 - **In-Memory + Persistent**: Hot data in memory via RocksDB block cache, all data persisted to disk
 - **Memcached Protocol**: Drop-in replacement for memcached, works with any memcached client
 - **Horizontal Scaling**: Scale to millions of TPS by adding nodes behind mcrouter
-- **mcrouter Native**: Built for Facebook's battle-tested cache router with consistent hashing
+- **mcrouter Native**: Built for Meta's battle-tested cache router with consistent hashing
 - **TTL Support**: Memcached-compatible expiration (lazy deletion + compaction filter)
 - **High Performance**: Zero-copy parsing, efficient buffer management, async I/O with Tokio
 - **Production Ready**: Prometheus metrics, health checks, graceful shutdown
