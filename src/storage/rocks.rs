@@ -289,4 +289,41 @@ mod tests {
         assert!(storage.delete(b"key").unwrap());
         assert!(storage.get(b"key").unwrap().is_none());
     }
+
+    #[test]
+    fn test_compaction_filter_expired_key() {
+        // expire_at = 1 (far in the past), flags = 0, data = "old"
+        let value = StoredValue::with_expire_at(0, 1, b"old".to_vec());
+        let encoded = value.encode();
+
+        let decision = ttl_compaction_filter(0, b"key", &encoded);
+        assert!(matches!(decision, CompactionDecision::Remove));
+    }
+
+    #[test]
+    fn test_compaction_filter_valid_key() {
+        // expire_at far in the future
+        let value = StoredValue::with_expire_at(0, u64::MAX, b"fresh".to_vec());
+        let encoded = value.encode();
+
+        let decision = ttl_compaction_filter(0, b"key", &encoded);
+        assert!(matches!(decision, CompactionDecision::Keep));
+    }
+
+    #[test]
+    fn test_compaction_filter_never_expire() {
+        // expire_at = 0 means never expire
+        let value = StoredValue::with_expire_at(0, 0, b"permanent".to_vec());
+        let encoded = value.encode();
+
+        let decision = ttl_compaction_filter(0, b"key", &encoded);
+        assert!(matches!(decision, CompactionDecision::Keep));
+    }
+
+    #[test]
+    fn test_compaction_filter_short_value() {
+        // Value too short to contain expire_at header
+        let decision = ttl_compaction_filter(0, b"key", &[0, 1, 2]);
+        assert!(matches!(decision, CompactionDecision::Keep));
+    }
 }
