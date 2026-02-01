@@ -5,7 +5,7 @@
 use crate::StorageError;
 use crate::config::StorageConfig;
 use crate::storage::value::{StoredValue, current_timestamp};
-use rust_rocksdb::{BlockBasedOptions, CompactionDecision, DB, DBCompactionStyle, Options};
+use rust_rocksdb::{BlockBasedOptions, CompactionDecision, DB, DBCompactionStyle, Options, WriteOptions};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::{info, trace};
@@ -28,6 +28,7 @@ pub struct MemoryUsage {
 /// RocksDB-backed storage
 pub struct RocksStorage {
     db: Arc<DB>,
+    write_opts: WriteOptions,
 }
 
 impl RocksStorage {
@@ -80,7 +81,13 @@ impl RocksStorage {
             config.block_cache_size / (1024 * 1024),
         );
 
-        Ok(Self { db: Arc::new(db) })
+        // Disable WAL: writes go directly to memtable (RAM only)
+        // Data reaches disk only when memtable flushes to SST file (~every few seconds)
+        // Trade-off: crash loses unflushed data (acceptable for a cache)
+        let mut write_opts = WriteOptions::default();
+        write_opts.disable_wal(true);
+
+        Ok(Self { db: Arc::new(db), write_opts })
     }
 
     /// Get a value by key (with lazy expiration)
@@ -95,7 +102,7 @@ impl RocksStorage {
                         expire_at = value.expire_at,
                         "Lazy expiration: removed expired key"
                     );
-                    let _ = self.db.delete(key);
+                    let _ = self.db.delete_opt(key, &self.write_opts);
                     Ok(None)
                 } else {
                     Ok(Some(value))
@@ -145,17 +152,17 @@ impl RocksStorage {
                     key = %String::from_utf8_lossy(key),
                     "Lazy expiration: removed expired key"
                 );
-                let _ = self.db.delete(key);
+                let _ = self.db.delete_opt(key, &self.write_opts);
             }
         }
 
         Ok(results)
     }
 
-    /// Set a value
+    /// Set a value (WAL disabled — writes go to memtable only, flushed to disk async)
     pub fn set(&self, key: &[u8], value: StoredValue) -> Result<(), StorageError> {
         let encoded = value.encode();
-        self.db.put(key, &encoded)?;
+        self.db.put_opt(key, &encoded, &self.write_opts)?;
         Ok(())
     }
 
@@ -168,7 +175,7 @@ impl RocksStorage {
         let existed = self.db.get(key)?.is_some();
         // Always call delete - RocksDB delete is idempotent
         // This avoids the race where key is deleted between get and delete
-        self.db.delete(key)?;
+        self.db.delete_opt(key, &self.write_opts)?;
         Ok(existed)
     }
 
