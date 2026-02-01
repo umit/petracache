@@ -13,6 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Clear macOS-specific flags
         run: |
           echo "CXXFLAGS=" >> $GITHUB_ENV
