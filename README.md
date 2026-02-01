@@ -24,6 +24,14 @@ High-performance in-memory cache with persistent storage, designed to run behind
 - **Built for mcrouter** - Facebook's battle-tested cache router used at scale
 - **Written in Rust** - Memory safe, zero GC pauses, predictable latency
 
+## Why Memcached Protocol?
+
+Memcached is the simplest cache protocol: `get`, `set`, `delete`. Nothing more.
+
+With mcrouter in front, you get sharding, replication, and failover for free — no client-side complexity, no cluster management. Facebook serves 5 billion requests/second this way.
+
+PetraCache adds persistence to this stack. Same protocol, same tools, same mcrouter config — but data survives restarts.
+
 ## Why PetraCache?
 
 **The Problem:** Memcached is super fast but doesn't persist data. Redis offers persistence but with a different protocol and added complexity.
