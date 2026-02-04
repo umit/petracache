@@ -231,10 +231,9 @@ fn parse_log_level(level: &str) -> LogLevel {
         "debug" => LogLevel::Debug,
         "info" => LogLevel::Info,
         "warn" => LogLevel::Warn,
-        "error" => LogLevel::Error,
         "fatal" => LogLevel::Fatal,
         "header" => LogLevel::Header,
-        _ => LogLevel::Error,
+        _ => LogLevel::Error, // "error" or any unknown value
     }
 }
 
