@@ -3,6 +3,14 @@
 //! A memcached ASCII protocol compatible server backed by RocksDB storage.
 //! Designed to work behind mcrouter for routing and failover.
 
+// Use jemalloc for better multi-threaded performance (10-30% throughput improvement)
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 use petracache::config::Config;
 use petracache::health::HealthServer;
 use petracache::metrics::Metrics;

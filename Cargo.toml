@@ -42,6 +42,10 @@ toml = "0.8"
 # Utilities
 parking_lot = "0.12"
 
+# Memory allocator (10-30% throughput improvement for multi-threaded workloads)
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.6"
+
 [dev-dependencies]
 tempfile = "3.24"
 tokio = { version = "1.49", features = ["rt-multi-thread", "macros"] }
