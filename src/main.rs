@@ -3,7 +3,7 @@
 //! A memcached ASCII protocol compatible server backed by RocksDB storage.
 //! Designed to work behind mcrouter for routing and failover.
 
-// Use jemalloc for better multi-threaded performance (10-30% throughput improvement)
+// Use jemalloc as global memory allocator
 #[cfg(not(target_env = "msvc"))]
 use tikv_jemallocator::Jemalloc;
 

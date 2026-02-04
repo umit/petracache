@@ -42,7 +42,7 @@ toml = "0.8"
 # Utilities
 parking_lot = "0.12"
 
-# Memory allocator (10-30% throughput improvement for multi-threaded workloads)
+# Memory allocator
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.6"
 
