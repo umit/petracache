@@ -303,6 +303,10 @@ RUST_LOG=info cargo run -- config.toml
 RUST_LOG=trace cargo run -- config.toml
 ```
 
+## Resources
+
+- [Scaling Memcache at Shopify with mcrouter](https://kirshatrov.com/posts/mcrouter) - Practical guide on using mcrouter for memcached scaling
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
